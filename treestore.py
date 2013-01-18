@@ -64,8 +64,8 @@ class Treestore:
     def remove_trees(self, tree_name):
         context = RDF.Node(RDF.Uri(tree_name))
         model = RDF.Model(self.store)
-        for stmt in model.as_stream(context=context):
-            del model[stmt, context]        
+        model.remove_statements_with_context(context)
+        model.sync()
 
 
 if __name__ == '__main__':
