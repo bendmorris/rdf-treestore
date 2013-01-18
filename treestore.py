@@ -29,7 +29,7 @@ class Treestore:
         
         if tree_name is None: tree_name = os.path.basename(tree_file)
 
-        bp.convert(tree_file, format, None, 'cdao', storage=self.store, base_uri=tree_name)
+        bp.convert(tree_file, format, None, 'cdao', storage=self.store, context=tree_name)
 
 
     def get_trees(self, tree_name):
@@ -43,7 +43,7 @@ class Treestore:
         '''
         
         parser = bp.CDAOIO.Parser()
-        return parser.parse_model(RDF.Model(self.store), tree_name)
+        return parser.parse_model(RDF.Model(self.store), context=tree_name)
         
 
     def serialize_trees(self, tree_name, format='newick'):
@@ -64,7 +64,7 @@ class Treestore:
     def remove_trees(self, tree_name):
         context = RDF.Node(RDF.Uri(tree_name))
         model = RDF.Model(self.store)
-        model.remove_statements_with_context(context)
+        model.remove_statements_with_context(context=context)
         model.sync()
 
 
