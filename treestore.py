@@ -51,7 +51,6 @@ class Treestore:
         '''
 
         s = StringIO()
-        for tree in self.get_trees(tree_name):
-            bp.write(tree, s, format)
+        bp.write(self.get_trees(tree_name), s, format)
 
         return s.getvalue()
