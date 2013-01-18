@@ -67,7 +67,7 @@ if __name__ == '__main__':
     formats = ' | '.join(bp._io.supported_formats)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-s', '--store', help='Name of Redland store (default=virtuoso)')
+    parser.add_argument('-s', '--store', help='name of Redland store (default=virtuoso)')
     parser.add_argument('-d', '--dsn', help='ODBC DSN (default=Virtuoso)')
     parser.add_argument('-u', '--user', help='ODBC user (default=dba)')
     parser.add_argument('-p', '--password', help='ODBC password (default=dba)')
