@@ -9,3 +9,15 @@ this fork using the following commands:
     git checkout cdao
     python setup.py install
 
+Try it out (you'll need an ODBC connection to Virtuoso; you can specify connection
+parameters when initializing the Treestore object):
+
+    >>> from treestore import Treestore
+    >>> t = Treestore()
+    >>> t.add_trees('test.newick', 'test')
+    >>> trees = t.get_trees('test')
+    >>> trees.next()
+    Tree(weight=1.0, rooted=False)
+    >>> print t.serialize_trees('test', 'nexml')
+    ...
+    
