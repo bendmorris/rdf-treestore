@@ -61,6 +61,13 @@ class Treestore:
         return s.getvalue()
 
 
+    def remove_trees(self, tree_name):
+        context = RDF.Node(RDF.Uri(tree_name))
+        model = RDF.Model(self.store)
+        for stmt in model.as_stream(context=context):
+            del model[stmt, context]        
+
+
 if __name__ == '__main__':
     import argparse
 
@@ -85,6 +92,9 @@ if __name__ == '__main__':
     get_parser.add_argument('format', help='serialization format (%s) (default=newick)' % formats, 
                             nargs='?', default='newick')
 
+    rm_parser = subparsers.add_parser('rm', help='remove trees from Virtuoso')
+    rm_parser.add_argument('name', help='tree name')
+
 
     args = parser.parse_args()
 
@@ -100,3 +110,5 @@ if __name__ == '__main__':
         treestore.add_trees(args.file, args.format, args.name)
     elif args.command == 'get':
         print treestore.serialize_trees(args.name, args.format),
+    elif args.command == 'rm':
+        treestore.remove_trees(args.name)
