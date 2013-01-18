@@ -5,12 +5,14 @@ from cStringIO import StringIO
 
 
 class Treestore:
-    def __init__(self, dsn='Virtuoso', user='dba', password='dba'):
-        '''Create a treestore object from a Virtuoso ODBC connection with given
-        DSN, username and password.'''
+    def __init__(self, storage_name='virtuoso', dsn='Virtuoso', 
+                 user='dba', password='dba', options_string=None):
+        '''Create a treestore object from an ODBC connection with given DSN,
+        username and password.'''
 
-        self.store = RDF.Storage(storage_name='virtuoso', name='db',
-                                 options_string="dsn='%s',user='%s',password='%s'"
+        self.store = RDF.Storage(storage_name=storage_name, name='db',
+                                 options_string="dsn='%s',user='%s',password='%s'" 
+                                 if not options_string else options_string
                                  % (dsn, user, password))
 
 
@@ -62,29 +64,33 @@ if __name__ == '__main__':
     formats = ' | '.join(bp._io.supported_formats)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dsn', help='DSN for Virtuoso')
-    parser.add_argument('-u', '--user', help='user for Virtuoso')
-    parser.add_argument('-p', '--password', help='password for Virtuoso')
+    parser.add_argument('-s', '--store', help='Name of Redland store (default=virtuoso)')
+    parser.add_argument('-d', '--dsn', help='ODBC DSN (default=Virtuoso)')
+    parser.add_argument('-u', '--user', help='ODBC user (default=dba)')
+    parser.add_argument('-p', '--password', help='ODBC password (default=dba)')
+    parser.add_argument('-o', '--option', help='options_string for Redland store; ignores dsn/user/password')
 
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
 
     add_parser = subparsers.add_parser('add', help='add trees to Virtuoso')
     add_parser.add_argument('file', help='tree file')
     add_parser.add_argument('format', help='file format (%s)' % formats)
-    add_parser.add_argument('name', help='tree name (defaults to file name)', nargs='?', default=None)
+    add_parser.add_argument('name', help='tree name (default=file name)', nargs='?', default=None)
 
     get_parser = subparsers.add_parser('get', help='retrieve trees from Virtuoso')
     get_parser.add_argument('name', help='tree name')
-    get_parser.add_argument('format', help='serialization format (%s) (defaults to newick)' % formats, 
+    get_parser.add_argument('format', help='serialization format (%s) (default=newick)' % formats, 
                             nargs='?', default='newick')
 
 
     args = parser.parse_args()
 
     kwargs = {}
+    if args.store: kwargs['storage_name'] = args.store
     if args.dsn: kwargs['dsn'] = args.dsn
     if args.user: kwargs['user'] = args.user
     if args.password: kwargs['password'] = args.password
+    if args.option: kwargs['options_string'] = args.option
     treestore = Treestore(**kwargs)
 
     if args.command == 'add':
