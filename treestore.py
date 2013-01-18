@@ -1,5 +1,6 @@
 import Bio.Phylo as bp
 import RDF
+import os
 
 
 class Treestore:
@@ -20,7 +21,7 @@ class Treestore:
         >>> treestore.add_trees('test.newick', 'newick', 'test')
         '''
         
-        if tree_name is None: tree_name = tree.__name__
+        if tree_name is None: tree_name = os.path.basename(tree_file)
 
         bp.convert(tree_file, format, None, 'cdao', storage=self.store, base_uri=tree_name)
 
