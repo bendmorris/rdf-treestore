@@ -15,9 +15,9 @@ class Treestore:
         else:
             self.store = RDF.Storage(storage_name=storage_name, name='db',
                                      options_string="dsn='%s',user='%s',password='%s'" 
+                                     % (dsn, user, password)
                                      if not options_string else options_string
-                                     % (dsn, user, password))
-
+                                     )
 
     def add_trees(self, tree_file, format, tree_name=None):
         '''Convert trees residing in a text file into RDF, and add them to the
