@@ -1,6 +1,7 @@
 import Bio.Phylo as bp
 import RDF
 import os
+from cStringIO import StringIO
 
 
 class Treestore:
@@ -39,3 +40,18 @@ class Treestore:
         parser = bp.CDAOIO.Parser()
         return parser.parse_model(RDF.Model(self.store), tree_name)
         
+
+    def serialize_trees(self, tree_name, format='newick'):
+        '''Retrieve trees serialized to any format supported by Biopython.
+        
+        Current options include 'newick', 'nexus', 'phyloxml', 'nexml', and 'cdao'
+
+        Example:
+        >>> treestore.serialize_trees('test')
+        '''
+
+        s = StringIO()
+        for tree in self.get_trees(tree_name):
+            bp.write(tree, s, format)
+
+        return s.getvalue()
