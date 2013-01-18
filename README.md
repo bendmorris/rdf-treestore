@@ -21,3 +21,7 @@ parameters when initializing the Treestore object):
     >>> print t.serialize_trees('test', 'nexml')
     ...
     
+Or from the command line:
+
+    $ python treestore.py add test.newick newick
+    $ python treestore.py get test nexml

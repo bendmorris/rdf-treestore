@@ -54,3 +54,40 @@ class Treestore:
         bp.write(self.get_trees(tree_name), s, format)
 
         return s.getvalue()
+
+
+if __name__ == '__main__':
+    import argparse
+
+    formats = ' | '.join(bp._io.supported_formats)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dsn', help='DSN for Virtuoso')
+    parser.add_argument('-u', '--user', help='user for Virtuoso')
+    parser.add_argument('-p', '--password', help='password for Virtuoso')
+
+    subparsers = parser.add_subparsers(help='sub-command help', dest='command')
+
+    add_parser = subparsers.add_parser('add', help='add trees to Virtuoso')
+    add_parser.add_argument('file', help='tree file')
+    add_parser.add_argument('format', help='file format (%s)' % formats)
+    add_parser.add_argument('name', help='tree name', nargs='?', default=None)
+
+    get_parser = subparsers.add_parser('get', help='retrieve trees from Virtuoso')
+    get_parser.add_argument('name', help='tree name')
+    get_parser.add_argument('format', help='serialization format (%s)' % formats, nargs='?', default='newick')
+
+
+    args = parser.parse_args()
+
+    kwargs = {}
+    if args.dsn: kwargs['dsn'] = args.dsn
+    if args.user: kwargs['user'] = args.user
+    if args.password: kwargs['password'] = args.password
+    treestore = Treestore(**kwargs)
+
+    if args.command == 'add':
+        if args.file is None: raise Exception('No tree file specified.')
+        treestore.add_trees(args.file, args.format, args.name)
+    elif args.command == 'get':
+        print treestore.serialize_trees(args.name, args.format)
