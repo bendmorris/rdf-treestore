@@ -99,4 +99,4 @@ if __name__ == '__main__':
     if args.command == 'add':
         treestore.add_trees(args.file, args.format, args.name)
     elif args.command == 'get':
-        print treestore.serialize_trees(args.name, args.format)
+        print treestore.serialize_trees(args.name, args.format),
