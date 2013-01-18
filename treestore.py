@@ -71,11 +71,12 @@ if __name__ == '__main__':
     add_parser = subparsers.add_parser('add', help='add trees to Virtuoso')
     add_parser.add_argument('file', help='tree file')
     add_parser.add_argument('format', help='file format (%s)' % formats)
-    add_parser.add_argument('name', help='tree name', nargs='?', default=None)
+    add_parser.add_argument('name', help='tree name (defaults to file name)', nargs='?', default=None)
 
     get_parser = subparsers.add_parser('get', help='retrieve trees from Virtuoso')
     get_parser.add_argument('name', help='tree name')
-    get_parser.add_argument('format', help='serialization format (%s)' % formats, nargs='?', default='newick')
+    get_parser.add_argument('format', help='serialization format (%s) (defaults to newick)' % formats, 
+nargs='?', default='newick')
 
 
     args = parser.parse_args()
