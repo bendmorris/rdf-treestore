@@ -82,17 +82,17 @@ if __name__ == '__main__':
 
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
 
-    add_parser = subparsers.add_parser('add', help='add trees to Virtuoso')
+    add_parser = subparsers.add_parser('add', help='add trees to treestore')
     add_parser.add_argument('file', help='tree file')
     add_parser.add_argument('format', help='file format (%s)' % formats)
     add_parser.add_argument('name', help='tree name (default=file name)', nargs='?', default=None)
 
-    get_parser = subparsers.add_parser('get', help='retrieve trees from Virtuoso')
+    get_parser = subparsers.add_parser('get', help='retrieve trees from treestore')
     get_parser.add_argument('name', help='tree name')
     get_parser.add_argument('format', help='serialization format (%s) (default=newick)' % formats, 
                             nargs='?', default='newick')
 
-    rm_parser = subparsers.add_parser('rm', help='remove trees from Virtuoso')
+    rm_parser = subparsers.add_parser('rm', help='remove trees from treestore')
     rm_parser.add_argument('name', help='tree name')
 
 
