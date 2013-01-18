@@ -23,5 +23,5 @@ parameters when initializing the Treestore object):
     
 Or from the command line:
 
-    $ python treestore.py add test.newick newick
+    $ python treestore.py add test.newick newick test
     $ python treestore.py get test nexml
