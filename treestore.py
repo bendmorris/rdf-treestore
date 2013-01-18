@@ -88,7 +88,6 @@ nargs='?', default='newick')
     treestore = Treestore(**kwargs)
 
     if args.command == 'add':
-        if args.file is None: raise Exception('No tree file specified.')
         treestore.add_trees(args.file, args.format, args.name)
     elif args.command == 'get':
         print treestore.serialize_trees(args.name, args.format)
