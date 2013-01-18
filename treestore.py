@@ -6,14 +6,17 @@ from cStringIO import StringIO
 
 class Treestore:
     def __init__(self, storage_name='virtuoso', dsn='Virtuoso', 
-                 user='dba', password='dba', options_string=None):
+                 user='dba', password='dba', options_string=None, storage=None):
         '''Create a treestore object from an ODBC connection with given DSN,
         username and password.'''
 
-        self.store = RDF.Storage(storage_name=storage_name, name='db',
-                                 options_string="dsn='%s',user='%s',password='%s'" 
-                                 if not options_string else options_string
-                                 % (dsn, user, password))
+        if storage:
+            self.store = storage
+        else:
+            self.store = RDF.Storage(storage_name=storage_name, name='db',
+                                     options_string="dsn='%s',user='%s',password='%s'" 
+                                     if not options_string else options_string
+                                     % (dsn, user, password))
 
 
     def add_trees(self, tree_file, format, tree_name=None):
