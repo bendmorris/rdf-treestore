@@ -23,7 +23,7 @@ for n in sizes:
     sys.stdout.flush()
     
     start_time = time.time()
-    t.add_trees('bird%s.new' % s, 'newick', 'test%s' % s)
+    t.add_trees('tests/bird%s.new' % s, 'newick', 'test%s' % s)
     add_times[n] = time.time() - start_time
     print '\t', ti(add_times[n]),
     sys.stdout.flush()
@@ -35,14 +35,14 @@ for n in sizes:
     sys.stdout.flush()
 
     start_time = time.time()
-    bp.convert('bird%s.new' % s, 'newick', 'bird%s.cdao' % s, 'cdao')
+    bp.convert('tests/bird%s.new' % s, 'newick', 'tests/bird%s.cdao' % s, 'cdao')
     write_times[n] = time.time() - start_time
     print '\t', ti(write_times[n]),
     sys.stdout.flush()
 
     stringio = StringIO()
     start_time = time.time()
-    bp.write(bp.read('bird%s.cdao' % s, 'cdao'), stringio, 'newick')
+    bp.write(bp.read('tests/bird%s.cdao' % s, 'cdao'), stringio, 'newick')
     parse_times[n] = time.time() - start_time
     print '\t', ti(parse_times[n])
     sys.stdout.flush()
@@ -51,4 +51,4 @@ data = {}
 for term in ('add', 'retrieve', 'write', 'parse'):
     data[term] = eval('%s_times' % term)
 
-pkl.dump(data, open('benchmarks.pkl', 'w'), -1)
+pkl.dump(data, open('tests/benchmarks.pkl', 'w'), -1)
