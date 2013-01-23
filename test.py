@@ -7,7 +7,7 @@ import sys
 import cPickle as pkl
 
 t = Treestore()
-sizes = [50, 100, 200, 500, 1000, 2000, 5000]
+sizes = [10, 50, 100, 200, 500, 1000, 2000, 5000]
 ti = lambda x: str(datetime.timedelta(seconds=round(x, 3)))[:-3]
 
 add_times = {}

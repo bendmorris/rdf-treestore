@@ -13,5 +13,7 @@ for key in data:
 
 xscale('log')
 yscale('log')
+xlabel('tree size (terminal nodes)')
+ylabel('time (seconds)')
 legend()
 show()
