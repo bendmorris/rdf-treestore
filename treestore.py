@@ -2,6 +2,7 @@ import Bio.Phylo as bp
 import RDF
 import os
 from cStringIO import StringIO
+from __init__ import __version__
 
 
 class Treestore:
@@ -68,12 +69,13 @@ class Treestore:
         model.sync()
 
 
-if __name__ == '__main__':
+def main():
     import argparse
 
     formats = ' | '.join(bp._io.supported_formats)
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('-v', '--version', action='version', version=__version__)
     parser.add_argument('-s', '--store', help='name of Redland store (default=virtuoso)')
     parser.add_argument('-d', '--dsn', help='ODBC DSN (default=Virtuoso)')
     parser.add_argument('-u', '--user', help='ODBC user (default=dba)')
@@ -112,3 +114,7 @@ if __name__ == '__main__':
         print treestore.serialize_trees(args.name, args.format),
     elif args.command == 'rm':
         treestore.remove_trees(args.name)
+
+
+if __name__ == '__main__':
+    main()
