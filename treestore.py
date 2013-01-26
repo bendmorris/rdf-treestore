@@ -1,6 +1,7 @@
 import Bio.Phylo as bp
 import RDF
 import os
+import sys
 from cStringIO import StringIO
 from __init__ import __version__
 
@@ -71,8 +72,7 @@ class Treestore:
 
     def list_trees(self):
         model = RDF.Model(self.store)
-        for c in model.get_contexts():
-            yield str(c)
+        return [str(c) for c in model.get_contexts()]
 
 
 
@@ -117,15 +117,57 @@ def main():
     treestore = Treestore(**kwargs)
 
     if args.command == 'add':
+        # parse a tree and add it to the treestore
         treestore.add_trees(args.file, args.format, args.name)
+        
     elif args.command == 'get':
+        # get a tree, serialize in specified format, and output to stdout
         print treestore.serialize_trees(args.name, args.format),
+        
     elif args.command == 'rm':
+        # remove a certain tree from the treestore
         treestore.remove_trees(args.name)
+        
     elif args.command == 'ls':
-        for tree in sorted([tree for tree in treestore.list_trees()]): 
-            print tree
-
+        # list all trees in the treestore
+        trees = sorted(treestore.list_trees())
+        
+        if sys.stdout.isatty():
+            # if output to terminal, use column output
+            
+            #width, height = console.getTerminalSize()
+            from term_size import get_terminal_size
+            cols,lines = get_terminal_size()
+            max_width = cols
+            
+            def tree_columns(trees, cols):
+                columns = []
+                col_size = len(trees) / cols
+                extra = len(trees) % cols
+                n = 0
+                for i in range(cols):
+                    s = col_size
+                    if i+1 <= extra: s += 1         
+                    this_column = trees[n:n+s]
+                    columns.append(this_column)
+                    n += s
+                return columns
+                
+            for cols in [int(len(trees) / float(i) + 0.5) for i in range(1, len(trees) + 1)]:
+                columns = tree_columns(trees, cols)
+                widths = [max([len(c) for c in column])+2 for column in columns]
+                if sum(widths) < max_width:
+                    break
+                
+            for pos in range(len(columns[0])):
+                for column, width in zip(columns, widths):
+                    if len(column) > pos:
+                        print column[pos].ljust(width-1),
+                print
+                
+        else:
+            # otherwise, just output each tree, one per line
+            for tree in trees: print tree
 
 
 if __name__ == '__main__':
