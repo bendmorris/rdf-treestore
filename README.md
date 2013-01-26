@@ -26,6 +26,6 @@ Try it out:
     
 Or from the command line:
 
-    python treestore.py add test.newick newick test
-    python treestore.py get test nexml
-    python treestore.py rm test
+    treestore add test.newick newick test
+    treestore get test nexml
+    treestore rm test

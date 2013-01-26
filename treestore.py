@@ -3,8 +3,9 @@ import RDF
 import os
 import sys
 from cStringIO import StringIO
-from __init__ import __version__
 
+
+__version__ = '0.1.0'
 
 class Treestore:
     def __init__(self, storage_name='virtuoso', dsn='Virtuoso', 

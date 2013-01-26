@@ -1,1 +1,1 @@
-__version__ = '0.1.0'
+from treestore import Treestore, __version__
