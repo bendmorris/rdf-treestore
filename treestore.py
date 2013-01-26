@@ -69,6 +69,13 @@ class Treestore:
         model.sync()
 
 
+    def list_trees(self):
+        model = RDF.Model(self.store)
+        for c in model.get_contexts():
+            yield str(c)
+
+
+
 def main():
     import argparse
 
@@ -97,6 +104,7 @@ def main():
     rm_parser = subparsers.add_parser('rm', help='remove trees from treestore')
     rm_parser.add_argument('name', help='tree name')
 
+    rm_parser = subparsers.add_parser('ls', help='list all trees in treestore')
 
     args = parser.parse_args()
 
@@ -114,6 +122,10 @@ def main():
         print treestore.serialize_trees(args.name, args.format),
     elif args.command == 'rm':
         treestore.remove_trees(args.name)
+    elif args.command == 'ls':
+        for tree in sorted([tree for tree in treestore.list_trees()]): 
+            print tree
+
 
 
 if __name__ == '__main__':
