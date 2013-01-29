@@ -29,3 +29,8 @@ Or from the command line:
     treestore add test.newick newick test
     treestore get test nexml
     treestore rm test
+
+If you're not using Virtuoso, or you need to change connection parameters,
+refer to the command-line help menu:
+
+    treestore -h
