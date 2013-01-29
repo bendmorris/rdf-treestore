@@ -32,7 +32,7 @@ class Treestore:
         
         if tree_name is None: tree_name = os.path.basename(tree_file)
 
-        bp.convert(tree_file, format, None, 'cdao', storage=self.store, context=tree_name)
+        bp.convert(tree_file, format, None, 'cdao', storage=self.store, tree_name=tree_name, context=tree_name)
 
 
     def get_trees(self, tree_name):
@@ -59,7 +59,7 @@ class Treestore:
         '''
 
         s = StringIO()
-        bp.write(self.get_trees(tree_name), s, format)
+        bp.write(self.get_trees(tree_name), s, format, tree_name=tree_name)
 
         return s.getvalue()
 
