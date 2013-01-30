@@ -1,5 +1,6 @@
 import Bio.Phylo as bp
 import RDF
+import Redland_python
 import os
 import sys
 from cStringIO import StringIO
@@ -78,15 +79,17 @@ class Treestore:
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-SELECT DISTINCT ?g ?s ?o %s
+SELECT DISTINCT ?g
 WHERE {
     GRAPH ?g {
-        ?s obo:CDAO_0000148 ?o .
+        [] obo:CDAO_0000148 [] .
         %s
     }
-}''' % ('?s2' if contains else '', ''.join(['?s2 rdf:label "%s" .' % contain for contain in contains]))
-
+}''' % (''.join(['[] rdf:label "%s" .' % contain for contain in contains]))
+        
         query = RDF.SPARQLQuery(query)
+        def handler(*args): pass
+        Redland_python.set_callback(handler)
 
         return [str(result['g']) for result in query.execute(model)]
 
