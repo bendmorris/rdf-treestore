@@ -1,13 +1,16 @@
 import Bio.Phylo as bp
 import RDF
 import Redland_python
+import dendropy
 import os
+import re
 import sys
 import urlparse
+import tempfile
 from cStringIO import StringIO
 
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 class Treestore:
     def __init__(self, storage_name='virtuoso', dsn='Virtuoso', 
@@ -34,8 +37,18 @@ class Treestore:
         
         if tree_name is None: tree_name = os.path.basename(tree_file)
 
+        tmp_file = None
+        if format == 'nexus':
+            tree = dendropy.Tree(stream=open(tree_file), schema=format)
+            format = 'newick' 
+            tmp_file = tempfile.NamedTemporaryFile()
+            tmp_file.write(re.sub(r'\[.*\]\s*', '', tree.as_string(format)))
+            tmp_file.flush()
+            tree_file = tmp_file.name
+
         bp.convert(tree_file, format, None, 'cdao', storage=self.store, tree_name=tree_name, context=tree_name)
 
+        if tmp_file != None: tmp_file.close()
 
     def get_trees(self, tree_name):
         '''Retrieve trees that were previously added to the underlying RDF 
