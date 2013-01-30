@@ -78,13 +78,13 @@ class Treestore:
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-SELECT DISTINCT ?g ?s ?o ?s2
+SELECT DISTINCT ?g ?s ?o %s
 WHERE {
     GRAPH ?g {
         ?s obo:CDAO_0000148 ?o .
         %s
     }
-}''' % (''.join(['?s2 rdf:label "%s" .' % contain for contain in contains]))
+}''' % ('?s2' if contains else '', ''.join(['?s2 rdf:label "%s" .' % contain for contain in contains]))
 
         query = RDF.SPARQLQuery(query)
 
