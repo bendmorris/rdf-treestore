@@ -106,16 +106,18 @@ ORDER BY DESC(?matches)
                                               if (contains and not match_all) else '') 
 
 
-    def get_names(self, tree_name=None):
+    def get_names(self, tree_name=None, format='json'):
         model = RDF.Model(self.store)
 
         query = '''
+PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-SELECT DISTINCT ?label
+SELECT DISTINCT ?uri, ?label
 WHERE {
     GRAPH %s {
-        [] rdf:label ?label .
+        [] obo:CDAO_0000148 [] .
+        ?uri rdf:label ?label .
     }
 }
 ORDER BY ?label
@@ -128,8 +130,13 @@ ORDER BY ?label
         results = query.execute(model)
         Redland_python.reset_callback()
         
-        return ','.join([str(result['label']) for result in results])
-
+        if format == 'json':
+            return '[%s]' % ','.join([repr({'name': str(result['label']), 
+                                            'uri': str(result['uri'])}) for result in results])
+        elif format =='csv':
+            return ','.join([str(result['label']) for result in results])
+        else: 
+            return results
 
     def get_subtree(self, contains=[], match_all=False):
         trees = self.list_trees(contains=contains, match_all=match_all)
@@ -178,6 +185,8 @@ def main():
                                          help='return a comma-separated list of all taxa names')
     names_parser.add_argument('tree', help='name of tree (default=all trees)', 
                               nargs='?', default=None)
+    names_parser.add_argument('-f', '--format', help='file format (json, csv, xml) (default=csv)', 
+                              default='csv')
 
 
     prune_parser = subparsers.add_parser('prune', 
@@ -259,7 +268,7 @@ def main():
 
 
     elif args.command == 'names':
-        print treestore.get_names(tree_name=args.tree)
+        print treestore.get_names(tree_name=args.tree, format=args.format)
 
 
     elif args.command == 'prune':
