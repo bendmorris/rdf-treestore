@@ -72,28 +72,37 @@ class Treestore:
         model.sync()
 
 
-    def list_trees(self, contains=[]):
+    def list_trees(self, contains=[], match_all=False):
         model = RDF.Model(self.store)
 
         query = '''
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-SELECT DISTINCT ?g
+SELECT DISTINCT ?graph (count(?match) as ?matches)
 WHERE {
-    GRAPH ?g {
+    GRAPH ?graph {
         [] obo:CDAO_0000148 [] .
         %s
     }
-}''' % (''.join(['[] rdf:label "%s" .' % contain for contain in contains]))
+} 
+GROUP BY ?graph
+ORDER BY DESC(?matches)
+''' % (
+' UNION\n        '.join(['{ ?match rdf:label "%s" }' % contain for contain in contains]))
         
+        #print query
         query = RDF.SPARQLQuery(query)
+        
         def handler(*args): pass
         Redland_python.set_callback(handler)
         results = query.execute(model)
         Redland_python.reset_callback()
 
-        return [str(result['g']) for result in results]
+            
+        return [str(result['graph']) + (' (%s)' % result['matches'] if (contains and not match_all) else '') 
+                for result in results
+                if (not match_all) or int(str(result['matches']))==len(contains)]
 
 
 
@@ -129,6 +138,8 @@ def main():
     ls_parser.add_argument('contains', 
         help='comma-delimited list of species that must be contained in each returned tree (default=none)',
         nargs='?', default='')
+    ls_parser.add_argument('--all', help='only return trees that contain all given species', 
+                           action='store_true')
 
     args = parser.parse_args()
 
@@ -155,8 +166,8 @@ def main():
     elif args.command == 'ls':
         # list all trees in the treestore
         contains = args.contains
-        if contains: contains = [s.strip() for s in contains.split(',')]
-        trees = sorted(treestore.list_trees(contains=contains))
+        if contains: contains = set([s.strip() for s in contains.split(',')])
+        trees = sorted(treestore.list_trees(contains=contains, match_all=args.all))
         if not trees: exit()
         
         if sys.stdout.isatty():
