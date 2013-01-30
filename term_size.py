@@ -21,9 +21,4 @@ def get_terminal_size():
     if not cr:
         cr = (env.get('LINES', 25), env.get('COLUMNS', 80))
 
-        ### Use get(key[, default]) instead of a try/catch
-        #try:
-        #    cr = (env['LINES'], env['COLUMNS'])
-        #except:
-        #    cr = (25, 80)
     return int(cr[1]), int(cr[0])

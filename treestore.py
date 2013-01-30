@@ -73,7 +73,17 @@ class Treestore:
 
     def list_trees(self):
         model = RDF.Model(self.store)
-        return [str(c) for c in model.get_contexts()]
+
+        query = RDF.SPARQLQuery('''PREFIX obo: <http://purl.obolibrary.org/obo/>
+
+            SELECT DISTINCT ?g ?s ?o
+            WHERE {
+                GRAPH ?g {
+                    ?s obo:CDAO_0000148 ?o
+                }
+            }''')
+
+        return [str(result['g']) for result in query.execute(model)]
 
 
 
