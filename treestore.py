@@ -10,7 +10,7 @@ import tempfile
 from cStringIO import StringIO
 
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 class Treestore:
     def __init__(self, storage_name='virtuoso', dsn='Virtuoso', 
@@ -36,6 +36,15 @@ class Treestore:
         '''
         
         if tree_name is None: tree_name = os.path.basename(tree_file)
+
+        if format == 'ntriples':
+            model = RDF.Model(self.store)
+            file_model = RDF.Model()
+            RDF.Parser(name = 'ntriples').parse_into_model(file_model, 'file://%s' % os.path.abspath(tree_file))
+            for triple in file_model:
+                model.add_statement(triple, RDF.Node(RDF.Uri(tree_name)))
+            model.sync()
+            return
 
         tmp_file = None
         if format == 'nexus':
@@ -169,7 +178,9 @@ ORDER BY ?label
 def main():
     import argparse
 
-    formats = ' | '.join(bp._io.supported_formats)
+    bp_formats = ' | '.join(bp._io.supported_formats)
+    input_formats = '%s | ntriples' % bp_formats
+    output_formats = bp_formats
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--version', action='version', version=__version__)
@@ -184,12 +195,12 @@ def main():
 
     add_parser = subparsers.add_parser('add', help='add trees to treestore')
     add_parser.add_argument('file', help='tree file')
-    add_parser.add_argument('format', help='file format (%s)' % formats)
+    add_parser.add_argument('format', help='file format (%s)' % input_formats)
     add_parser.add_argument('name', help='tree name (default=file name)', nargs='?', default=None)
 
     get_parser = subparsers.add_parser('get', help='retrieve trees from treestore')
     get_parser.add_argument('name', help='tree name')
-    get_parser.add_argument('format', help='serialization format (%s) (default=newick)' % formats, 
+    get_parser.add_argument('format', help='serialization format (%s) (default=newick)' % output_formats, 
                             nargs='?', default='newick')
 
     rm_parser = subparsers.add_parser('rm', help='remove trees from treestore')
@@ -215,7 +226,7 @@ def main():
     prune_parser.add_argument('contains', 
         help='comma-delimited list of species that must be contained in each returned tree',
         nargs='?')
-    prune_parser.add_argument('format', help='serialization format (%s) (default=newick)' % formats, 
+    prune_parser.add_argument('format', help='serialization format (%s) (default=newick)' % output_formats, 
                               nargs='?', default='newick')
     prune_parser.add_argument('--all', help='only return trees that contain all given species', 
                               action='store_true')
