@@ -90,8 +90,10 @@ WHERE {
         query = RDF.SPARQLQuery(query)
         def handler(*args): pass
         Redland_python.set_callback(handler)
+        results = query.execute(model)
+        Redland_python.reset_callback()
 
-        return [str(result['g']) for result in query.execute(model)]
+        return [str(result['g']) for result in results]
 
 
 
