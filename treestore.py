@@ -135,7 +135,7 @@ ORDER BY ?label
         trees = self.list_trees(contains=contains, match_all=match_all)
         tree = trees.next()
         if not tree: raise Exception("An appropriate tree for this query couldn't be found.")
-
+        
         
 
 
@@ -216,7 +216,8 @@ def main():
         # list all trees in the treestore
         contains = args.contains
         if contains: contains = set([s.strip() for s in contains.split(',')])
-        trees = sorted(treestore.list_trees(contains=contains, match_all=args.all))
+        trees = [r for r in treestore.list_trees(contains=contains, match_all=args.all)]
+        if not args.contains: trees = sorted(trees)
         if not trees: exit()
         
         if sys.stdout.isatty():
