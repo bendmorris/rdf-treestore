@@ -3,6 +3,7 @@ import RDF
 import Redland_python
 import os
 import sys
+import urlparse
 from cStringIO import StringIO
 
 
@@ -113,15 +114,15 @@ ORDER BY DESC(?matches)
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-SELECT DISTINCT ?uri, ?label
+SELECT DISTINCT ?uri, ?label, ?graph
 WHERE {
-    GRAPH %s {
+    GRAPH ?graph {
         [] obo:CDAO_0000148 [] .
         ?uri rdf:label ?label .
     }
 }
 ORDER BY ?label
-''' % (('<%s>' % tree_name) if tree_name else '?graph')
+'''
         
         #print query
         query = RDF.SPARQLQuery(query)
@@ -130,9 +131,20 @@ ORDER BY ?label
         results = query.execute(model)
         Redland_python.reset_callback()
         
+        if tree_name: results = [result for result in results if str(result['graph']) == tree_name]
+        
+        def uri(result):
+            graph = str(result['graph'])
+            uri = str(result['uri'])
+            if graph.endswith('/'):
+                return urlparse.urljoin(graph, uri)
+            else:
+                return urlparse.urljoin(graph, '#%s' % uri)
+        
         if format == 'json':
             return '[%s]' % ','.join([repr({'name': str(result['label']), 
-                                            'uri': str(result['uri'])}) for result in results])
+                                            'uri': uri(result)}) 
+                                     for result in results])
         elif format =='csv':
             return ','.join([str(result['label']) for result in results])
         else: 
@@ -157,7 +169,8 @@ def main():
     parser.add_argument('-d', '--dsn', help='ODBC DSN (default=Virtuoso)')
     parser.add_argument('-u', '--user', help='ODBC user (default=dba)')
     parser.add_argument('-p', '--password', help='ODBC password (default=dba)')
-    parser.add_argument('-o', '--option', help='options_string for Redland store; ignores dsn/user/password')
+    parser.add_argument('-o', '--option', 
+        help='options_string for Redland store; if this option is provided, dsn/user/password options are ignored')
 
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
 
