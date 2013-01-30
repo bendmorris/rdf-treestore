@@ -100,9 +100,10 @@ ORDER BY DESC(?matches)
         Redland_python.reset_callback()
 
             
-        return [str(result['graph']) + (' (%s)' % result['matches'] if (contains and not match_all) else '') 
-                for result in results
-                if (not match_all) or int(str(result['matches']))==len(contains)]
+        for result in results:
+            if (not match_all) or int(str(result['matches']))==len(contains):
+                yield str(result['graph']) + (' (%s)' % result['matches'] 
+                                              if (contains and not match_all) else '') 
 
 
 
