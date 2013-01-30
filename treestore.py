@@ -106,6 +106,38 @@ ORDER BY DESC(?matches)
                                               if (contains and not match_all) else '') 
 
 
+    def get_names(self, tree_name=None):
+        model = RDF.Model(self.store)
+
+        query = '''
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT DISTINCT ?label
+WHERE {
+    GRAPH %s {
+        [] rdf:label ?label .
+    }
+}
+ORDER BY ?label
+''' % (('<%s>' % tree_name) if tree_name else '?graph')
+        
+        #print query
+        query = RDF.SPARQLQuery(query)
+        def handler(*args): pass
+        Redland_python.set_callback(handler)
+        results = query.execute(model)
+        Redland_python.reset_callback()
+        
+        return ','.join([str(result['label']) for result in results])
+
+
+    def get_subtree(self, contains=[], match_all=False):
+        trees = self.list_trees(contains=contains, match_all=match_all)
+        tree = trees.next()
+        if not tree: raise Exception("An appropriate tree for this query couldn't be found.")
+
+        
+
 
 def main():
     import argparse
@@ -141,6 +173,22 @@ def main():
         nargs='?', default='')
     ls_parser.add_argument('--all', help='only return trees that contain all given species', 
                            action='store_true')
+
+    names_parser = subparsers.add_parser('names', 
+                                         help='return a comma-separated list of all taxa names')
+    names_parser.add_argument('tree', help='name of tree (default=all trees)', 
+                              nargs='?', default=None)
+
+
+    prune_parser = subparsers.add_parser('prune', 
+                                         help='retrieve the best subtree containing a given set of taxa')
+    prune_parser.add_argument('contains', 
+        help='comma-delimited list of species that must be contained in each returned tree',
+        nargs='?')
+    prune_parser.add_argument('format', help='serialization format (%s) (default=newick)' % formats, 
+                              nargs='?', default='newick')
+    prune_parser.add_argument('--all', help='only return trees that contain all given species', 
+                              action='store_true')
 
     args = parser.parse_args()
 
@@ -207,6 +255,15 @@ def main():
         else:
             # otherwise, just output each tree, one per line
             for tree in trees: print tree
+
+
+    elif args.command == 'names':
+        print treestore.get_names(tree_name=args.tree)
+
+
+    elif args.command == 'prune':
+        contains = set([s.strip() for s in args.contains.split(',')])
+        print treestore.get_subtree(contains=contains, match_all=args.all)
 
 
 if __name__ == '__main__':
