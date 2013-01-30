@@ -61,7 +61,10 @@ class Treestore:
         '''
 
         s = StringIO()
-        bp.write(self.get_trees(tree_name), s, format)
+        if format == 'cdao':
+            bp.write(self.get_trees(tree_name), s, format, tree_name=tree_name)
+        else:
+            bp.write(self.get_trees(tree_name), s, format)
 
         return s.getvalue()
 
@@ -133,17 +136,9 @@ ORDER BY ?label
         
         if tree_name: results = [result for result in results if str(result['graph']) == tree_name]
         
-        def uri(result):
-            graph = str(result['graph'])
-            uri = str(result['uri'])
-            if graph.endswith('/'):
-                return urlparse.urljoin(graph, uri)
-            else:
-                return urlparse.urljoin(graph, '#%s' % uri)
-        
         if format == 'json':
             return '[%s]' % ','.join([repr({'name': str(result['label']), 
-                                            'uri': uri(result)}) 
+                                            'uri': str(result['uri'])}) 
                                      for result in results])
         elif format =='csv':
             return ','.join([str(result['label']) for result in results])
