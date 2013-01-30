@@ -27,6 +27,7 @@ class Treestore:
                                      if not options_string else options_string
                                      )
 
+
     def add_trees(self, tree_file, format, tree_name=None):
         '''Convert trees residing in a text file into RDF, and add them to the
         underlying RDF store with a context node for retrieval.
@@ -59,6 +60,7 @@ class Treestore:
 
         if tmp_file != None: tmp_file.close()
 
+
     def get_trees(self, tree_name):
         '''Retrieve trees that were previously added to the underlying RDF 
         store. Returns a generator of Biopython trees.
@@ -73,7 +75,7 @@ class Treestore:
         return parser.parse_model(RDF.Model(self.store), context=tree_name)
         
 
-    def serialize_trees(self, tree_name, format='newick'):
+    def serialize_trees(self, tree_name='', format='newick', trees=None):
         '''Retrieve trees serialized to any format supported by Biopython.
         
         Current options include 'newick', 'nexus', 'phyloxml', 'nexml', and 'cdao'
@@ -82,11 +84,13 @@ class Treestore:
         >>> treestore.serialize_trees('test')
         '''
 
+        if trees is None: trees = self.get_trees(tree_name)
+
         s = StringIO()
         if format == 'cdao':
-            bp.write(self.get_trees(tree_name), s, format, tree_name=tree_name)
+            bp.write(trees, s, format, tree_name=tree_name)
         else:
-            bp.write(self.get_trees(tree_name), s, format)
+            bp.write(trees, s, format)
 
         return s.getvalue()
 
@@ -98,7 +102,7 @@ class Treestore:
         model.sync()
 
 
-    def list_trees(self, contains=[], match_all=False):
+    def list_trees(self, contains=[], match_all=False, show_match_counts=False):
         model = RDF.Model(self.store)
 
         query = '''
@@ -114,8 +118,7 @@ WHERE {
 } 
 GROUP BY ?graph
 ORDER BY DESC(?matches)
-''' % (
-' UNION\n        '.join(['{ ?match rdf:label "%s" }' % contain for contain in contains]))
+''' % (' UNION\n        '.join(['{ ?match rdf:label "%s" }' % contain for contain in contains]))
         
         #print query
         query = RDF.SPARQLQuery(query)
@@ -125,11 +128,10 @@ ORDER BY DESC(?matches)
         results = query.execute(model)
         Redland_python.reset_callback()
 
-            
         for result in results:
             if (not match_all) or int(str(result['matches']))==len(contains):
                 yield str(result['graph']) + (' (%s)' % result['matches'] 
-                                              if (contains and not match_all) else '') 
+                                              if (contains and not match_all and show_match_counts) else '') 
 
 
     def get_names(self, tree_name=None, format='json'):
@@ -159,19 +161,37 @@ ORDER BY ?label
         if tree_name: results = [result for result in results if str(result['graph']) == tree_name]
         
         if format == 'json':
-            return '[%s]' % ','.join([repr({'name': str(result['label']), 
-                                            'uri': str(result['uri'])}) 
-                                     for result in results])
+            json_dict = {'metadata': {}, 'externalSources': {},
+                         'names': [{
+                                    'name': str(result['label']),
+                                    'treestoreId': str(result['uri']),
+                                    'sourceIds': {},
+                                    }
+                                   for result in results
+                                   ]
+                        }
+            return repr(json_dict)
         elif format =='csv':
             return ','.join([str(result['label']) for result in results])
         else: 
             return results
 
-    def get_subtree(self, contains=[], match_all=False):
+
+    def get_subtree(self, contains=[], match_all=False, format='newick'):
+        if not contains: raise Exception('A list of taxa is required.')
         trees = self.list_trees(contains=contains, match_all=match_all)
         tree = trees.next()
         if not tree: raise Exception("An appropriate tree for this query couldn't be found.")
+        context = RDF.Node(RDF.Uri(tree))
+        model = RDF.Model(self.store)
         
+        tree = self.get_trees(tree).next()
+        terms = [c.name for c in tree.get_terminals()]
+        for term in terms:
+            if not term in contains:
+                tree.prune(term)
+
+        return self.serialize_trees(trees=tree, format=format)
         
 
 
@@ -257,7 +277,8 @@ def main():
         # list all trees in the treestore
         contains = args.contains
         if contains: contains = set([s.strip() for s in contains.split(',')])
-        trees = [r for r in treestore.list_trees(contains=contains, match_all=args.all)]
+        trees = [r for r in treestore.list_trees(contains=contains, match_all=args.all, 
+                                                 show_match_counts=True)]
         if not contains: trees = sorted(trees)
         if not trees: exit()
         
@@ -305,7 +326,7 @@ def main():
 
     elif args.command == 'prune':
         contains = set([s.strip() for s in args.contains.split(',')])
-        print treestore.get_subtree(contains=contains, match_all=args.all)
+        print treestore.get_subtree(contains=contains, match_all=args.all, format=args.format),
 
 
 if __name__ == '__main__':
