@@ -83,7 +83,7 @@ class Treestore:
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-SELECT DISTINCT ?graph (count(?match) as ?matches)
+SELECT ?graph (count(?match) as ?matches)
 WHERE {
     GRAPH ?graph {
         [] obo:CDAO_0000148 [] .
@@ -234,7 +234,7 @@ def main():
         contains = args.contains
         if contains: contains = set([s.strip() for s in contains.split(',')])
         trees = [r for r in treestore.list_trees(contains=contains, match_all=args.all)]
-        if not args.contains: trees = sorted(trees)
+        if not contains: trees = sorted(trees)
         if not trees: exit()
         
         if sys.stdout.isatty():
