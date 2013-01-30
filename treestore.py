@@ -59,7 +59,7 @@ class Treestore:
         '''
 
         s = StringIO()
-        bp.write(self.get_trees(tree_name), s, format, tree_name=tree_name)
+        bp.write(self.get_trees(tree_name), s, format)
 
         return s.getvalue()
 
@@ -71,17 +71,22 @@ class Treestore:
         model.sync()
 
 
-    def list_trees(self):
+    def list_trees(self, contains=[]):
         model = RDF.Model(self.store)
 
-        query = RDF.SPARQLQuery('''PREFIX obo: <http://purl.obolibrary.org/obo/>
+        query = '''
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-            SELECT DISTINCT ?g ?s ?o
-            WHERE {
-                GRAPH ?g {
-                    ?s obo:CDAO_0000148 ?o
-                }
-            }''')
+SELECT DISTINCT ?g ?s ?o ?s2
+WHERE {
+    GRAPH ?g {
+        ?s obo:CDAO_0000148 ?o .
+        %s
+    }
+}''' % (''.join(['?s2 rdf:label "%s" .' % contain for contain in contains]))
+
+        query = RDF.SPARQLQuery(query)
 
         return [str(result['g']) for result in query.execute(model)]
 
@@ -115,7 +120,10 @@ def main():
     rm_parser = subparsers.add_parser('rm', help='remove trees from treestore')
     rm_parser.add_argument('name', help='tree name')
 
-    rm_parser = subparsers.add_parser('ls', help='list all trees in treestore')
+    ls_parser = subparsers.add_parser('ls', help='list all trees in treestore')
+    ls_parser.add_argument('contains', 
+        help='comma-delimited list of species that must be contained in each returned tree (default=none)',
+        nargs='?', default='')
 
     args = parser.parse_args()
 
@@ -141,7 +149,10 @@ def main():
         
     elif args.command == 'ls':
         # list all trees in the treestore
-        trees = sorted(treestore.list_trees())
+        contains = args.contains
+        if contains: contains = [s.strip() for s in contains.split(',')]
+        trees = sorted(treestore.list_trees(contains=contains))
+        if not trees: exit()
         
         if sys.stdout.isatty():
             # if output to terminal, use column output
