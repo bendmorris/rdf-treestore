@@ -40,7 +40,7 @@ prefixAssignment = Suppress('>') + prefix + Suppress('=') + uri
 prefixAssignment.setParseAction(lambda x: (x[0], x[1]))
 prefixAssignments = OneOrMore(prefixAssignment)
 prefixAssignments.setParseAction(lambda x: {key:value for (key, value) in x})
-cqlQuery << ((prefixAssignments + cqlQuery) | scopedClause)
+cqlQuery << (Optional(prefixAssignments, default={}) + scopedClause)
 singleSpec = index + Optional(modifierList)
 sortSpec = OneOrMore(singleSpec)
 sortedQuery = Forward()
