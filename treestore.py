@@ -190,6 +190,8 @@ ORDER BY ?label
         for term in terms:
             if not term in contains:
                 tree.prune(term)
+        tree.collapse_all()
+        [tree.prune(c) for c in tree.get_terminals() if not c.name]
 
         return self.serialize_trees(trees=tree, format=format)
         
