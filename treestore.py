@@ -182,8 +182,10 @@ ORDER BY ?label
     def get_subtree(self, contains=[], match_all=False, format='newick'):
         if not contains: raise Exception('A list of taxa is required.')
         trees = self.list_trees(contains=contains, match_all=match_all)
-        tree = trees.next()
-        if not tree: raise Exception("An appropriate tree for this query couldn't be found.")
+        try:
+            tree = trees.next()
+        except StopIteration:
+            raise Exception("An appropriate tree for this query couldn't be found.")
         context = RDF.Node(RDF.Uri(tree))
         model = RDF.Model(self.store)
         
