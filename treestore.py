@@ -206,7 +206,7 @@ ORDER BY ?label
             if not term in contains:
                 tree.prune(term)
         while (prune_extra_clades(tree, tree.clade) or 
-               any([tree.prune(term) for term in tree.get_terminals() if not term.name]):
+               any([tree.prune(term) for term in tree.get_terminals() if not term.name])):
             pass
 
         return self.serialize_trees(trees=tree, format=format)
