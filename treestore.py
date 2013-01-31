@@ -219,9 +219,9 @@ ORDER BY ?label
 def main():
     import argparse
 
-    bp_formats = ' | '.join(bp._io.supported_formats.keys() + ['ascii'])
+    bp_formats = ' | '.join(bp._io.supported_formats)
     input_formats = '%s | ntriples' % bp_formats
-    output_formats = bp_formats
+    output_formats = '%s | ascii' % bp_formats
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--version', action='version', version=__version__)
