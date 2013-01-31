@@ -89,6 +89,8 @@ class Treestore:
         s = StringIO()
         if format == 'cdao':
             bp.write(trees, s, format, tree_name=tree_name)
+        elif format == 'ascii':
+            bp._utils.draw_ascii(trees)
         else:
             bp.write(trees, s, format)
 
@@ -185,13 +187,25 @@ ORDER BY ?label
         context = RDF.Node(RDF.Uri(tree))
         model = RDF.Model(self.store)
         
+        def prune_extra_clades(tree, clade, root=True):
+            result = 0
+            for child in clade.clades:
+                result += prune_extra_clades(tree, child, False)
+            if not root and len(clade) < 2 and not clade.name:
+                try: 
+                    tree.collapse(clade)
+                    return 1
+                except: return 0
+            return result
+
         tree = self.get_trees(tree).next()
         terms = [c.name for c in tree.get_terminals()]
         for term in terms:
             if not term in contains:
                 tree.prune(term)
-        tree.collapse_all()
-        [tree.prune(c) for c in tree.get_terminals() if not c.name]
+        while (prune_extra_clades(tree, tree.clade) or 
+               any([tree.prune(term) for term in tree.get_terminals() if not term.name]):
+            pass
 
         return self.serialize_trees(trees=tree, format=format)
         
