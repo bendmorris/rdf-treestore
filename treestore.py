@@ -90,7 +90,7 @@ class Treestore:
         if format == 'cdao':
             bp.write(trees, s, format, tree_name=tree_name)
         elif format == 'ascii':
-            bp._utils.draw_ascii(trees)
+            bp._utils.draw_ascii(trees.next())
         else:
             bp.write(trees, s, format)
 
@@ -209,14 +209,14 @@ ORDER BY ?label
                any([tree.prune(term) for term in tree.get_terminals() if not term.name])):
             pass
 
-        return self.serialize_trees(trees=tree, format=format)
+        return self.serialize_trees(trees=(t for t in [tree]), format=format)
         
 
 
 def main():
     import argparse
 
-    bp_formats = ' | '.join(bp._io.supported_formats)
+    bp_formats = ' | '.join(bp._io.supported_formats.keys() + ['ascii'])
     input_formats = '%s | ntriples' % bp_formats
     output_formats = bp_formats
 
