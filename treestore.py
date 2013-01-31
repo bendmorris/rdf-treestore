@@ -179,8 +179,11 @@ ORDER BY ?label
             return results
 
 
-    def get_subtree(self, contains=[], match_all=False, format='newick'):
-        if not contains: raise Exception('A list of taxa is required.')
+    def get_subtree(self, contains=[], contains_ids=[], match_all=False, format='newick'):
+        # TODO: rewrite this using SPARQL (ideally after Virtuoso starts supporting property paths)
+        # TODO: use contains_ids to find nodes by URI, then find common ancestor
+        # this will be more reasonable when this query switches to SPARQL
+        if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
         trees = self.list_trees(contains=contains, match_all=match_all)
         try:
             tree = trees.next()
