@@ -132,7 +132,6 @@ class Treestore:
 
     def list_trees(self, contains=[], match_all=False, show_match_counts=False):
         # TODO: use the smaller tree in the event of a match tie for efficiency
-        model = RDF.Model(self.store)
 
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
@@ -164,8 +163,6 @@ ORDER BY DESC(?matches)
 
 
     def get_names(self, tree_name=None, format='json'):
-        model = RDF.Model(self.store)
-
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
