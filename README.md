@@ -12,7 +12,7 @@ commands:
     git clone https://github.com/bendmorris/biopython.git
     cd biopython
     git checkout cdao
-    python setup.py install
+    sudo python setup.py install
 
 ### DendroPy
 

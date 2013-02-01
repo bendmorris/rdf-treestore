@@ -4,6 +4,7 @@ import Redland_python
 import dendropy
 import os
 import re
+import sha
 import sys
 import urlparse
 import tempfile
@@ -38,6 +39,7 @@ class Treestore:
         
         if tree_name is None: tree_name = os.path.basename(tree_file)
 
+        # If the source is an N-Triples file, then import it "as is":
         if format == 'ntriples':
             model = RDF.Model(self.store)
             file_model = RDF.Model()
@@ -47,6 +49,10 @@ class Treestore:
             model.sync()
             return
 
+        # All other formats are processed:
+
+        # NEXUS files are not properly handled by BioPython (Jan 2013), so convert them
+        # to Newick format with DendroPy:
         tmp_file = None
         if format == 'nexus':
             tree = dendropy.Tree(stream=open(tree_file), schema=format)
@@ -56,7 +62,13 @@ class Treestore:
             tmp_file.flush()
             tree_file = tmp_file.name
 
-        bp.convert(tree_file, format, None, 'cdao', storage=self.store, tree_name=tree_name, context=tree_name)
+        # Create a pseudo-unique URI for trees, if the tree name is not a URI already:
+        context = tree_name
+        if not re.match(r'\w+://', tree_name):
+            puid = sha.new(open(tree_file).read()).hexdigest()
+            context = 'http://phylotastic.org/hack2/%s/%s' % (puid, tree_name)
+
+        bp.convert(tree_file, format, None, 'cdao', storage=self.store, tree_name=tree_name, context=context)
 
         if tmp_file != None: tmp_file.close()
 
@@ -135,6 +147,33 @@ ORDER BY DESC(?matches)
                 yield str(result['graph']) + (' (%s)' % result['matches'] 
                                               if (contains and not match_all and show_match_counts) else '') 
 
+    def list_uris(self):
+        model = RDF.Model(self.store)
+
+        query = '''
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT DISTINCT ?graph ?uri
+WHERE {
+    GRAPH ?graph {
+        { ?s obo:CDAO_0000200 ?uri . }
+    }
+} 
+'''
+
+        query = RDF.SPARQLQuery(query)
+        
+        def handler(*args): pass
+        Redland_python.set_callback(handler)
+        results = query.execute(model)
+        Redland_python.reset_callback()
+
+        for result in results:
+            name, separator, identifier = str(result['uri']).partition('#')
+            whitespace = ' '
+            if len(name) < 24: whitespace = ' ' * (24 - len(name))
+            yield '%s%s%s' % (name, whitespace, '%s#%s' % (result['graph'], identifier))
 
     def get_names(self, tree_name=None, format='json'):
         model = RDF.Model(self.store)
@@ -261,6 +300,7 @@ def main():
     names_parser.add_argument('-f', '--format', help='file format (json, csv, xml) (default=csv)', 
                               default='csv')
 
+    uri_parser = subparsers.add_parser('uri', help='returns URIs of stored trees')
 
     prune_parser = subparsers.add_parser('prune', 
                                          help='retrieve the best subtree containing a given set of taxa')
@@ -349,6 +389,10 @@ def main():
         contains = set([s.strip() for s in args.contains.split(',')])
         print treestore.get_subtree(contains=contains, match_all=args.all, format=args.format),
 
+
+    elif args.command == 'uri':
+        uris = treestore.list_uris()
+        for uri in uris: print uri
 
 if __name__ == '__main__':
     main()
