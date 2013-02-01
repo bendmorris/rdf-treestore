@@ -4,6 +4,7 @@ import Redland_python
 import dendropy
 import os
 import re
+import sha
 import sys
 import urlparse
 import tempfile
@@ -21,19 +22,28 @@ class Treestore:
         '''Create a treestore object from an ODBC connection with given DSN,
         username and password.'''
 
-        if storage:
-            self.store = storage
-        else:
-            self.store = RDF.Storage(storage_name=storage_name, name='db',
-                                     options_string="dsn='%s',user='%s',password='%s'" 
-                                     % (dsn, user, password)
-                                     if not options_string else options_string
-                                     )
+        try:
+            if storage:
+                self.store = storage
+            else:
+                self.store = RDF.Storage(storage_name=storage_name, name='db',
+                                         options_string="dsn='%s',user='%s',password='%s'" 
+                                         % (dsn, user, password)
+                                         if not options_string else options_string
+                                         )
+        except:
+            # if Redland's Virtuoso storage fails, don't create this store now
+            pass
+
+        try:
             self.odbc_connection = pyodbc.connect('DSN=%s;UID=%s;PWD=%s' % (dsn, user, password),
                                                   autocommit=True)
+        except NameError:
+            # Handled later.
+            pass
 
 
-    def add_trees(self, tree_file, format, tree_name=None, bulk_loader=False):
+    def add_trees(self, tree_file, format, tree_name=None, bulk_loader=None):
         '''Convert trees residing in a text file into RDF, and add them to the
         underlying RDF store with a context node for retrieval.
 
@@ -43,6 +53,7 @@ class Treestore:
         
         if tree_name is None: tree_name = os.path.basename(tree_file)
 
+        # If the source is an N-Triples file, then import it "as is":
         if format == 'ntriples':
             model = RDF.Model(self.store)
             file_model = RDF.Model()
@@ -52,6 +63,10 @@ class Treestore:
             model.sync()
             return
 
+        # All other formats are processed:
+
+        # NEXUS files are not properly handled by BioPython (Jan 2013), so convert them
+        # to Newick format with DendroPy:
         tmp_file = None
         if format == 'nexus':
             tree = dendropy.Tree(stream=open(tree_file), schema=format)
@@ -61,7 +76,17 @@ class Treestore:
             tmp_file.flush()
             tree_file = tmp_file.name
         
+        # Create a pseudo-unique URI for trees, if the tree name is not a URI already:
+        context = tree_name
+        if not re.match(r'\w+://', tree_name):
+            puid = sha.new(open(tree_file).read()).hexdigest()
+            context = 'http://phylotastic.org/hack2/%s/%s' % (puid, tree_name)
+
         if bulk_loader:
+            if self.odbc_connection == None:
+                print 'Woops. \'pyodbc\' is not available on this platform.'
+                return
+
             bp.convert(tree_file, format, os.path.join(treestore_dir, 'temp.cdao'), 'cdao', 
                        tree_name=tree_name)
         
@@ -81,12 +106,12 @@ class Treestore:
 
             cursor.execute('DELETE FROM DB.DBA.load_list')
         
-            if tmp_file != None: tmp_file.close()
 
         else:
-            bp.convert(tree_file, format, os.path.join(treestore_dir, 'temp.cdao'), 'cdao', 
-                       tree_name=tree_name, storage=self.store, context=tree_name)
+            bp.convert(tree_file, format, None, 'cdao', 
+                       storage=self.store, tree_name=tree_name, context=context)
         
+        if tmp_file != None: tmp_file.close()
         
     def get_trees(self, tree_name):
         '''Retrieve trees that were previously added to the underlying RDF 
@@ -161,6 +186,33 @@ ORDER BY DESC(?matches)
                                          and show_match_counts) 
                                          else '') 
 
+    def list_uris(self):
+        model = RDF.Model(self.store)
+
+        query = '''
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT DISTINCT ?graph ?uri
+WHERE {
+    GRAPH ?graph {
+        { ?s obo:CDAO_0000200 ?uri . }
+    }
+} 
+'''
+
+        query = RDF.SPARQLQuery(query)
+        
+        def handler(*args): pass
+        Redland_python.set_callback(handler)
+        results = query.execute(model)
+        Redland_python.reset_callback()
+
+        for result in results:
+            name, separator, identifier = str(result['uri']).partition('#')
+            whitespace = ' '
+            if len(name) < 24: whitespace = ' ' * (24 - len(name))
+            yield '%s%s%s' % (name, whitespace, '%s#%s' % (result['graph'], identifier))
 
     def get_names(self, tree_name=None, format='json'):
         query = '''sparql
@@ -299,6 +351,8 @@ def main():
     names_parser.add_argument('-f', '--format', help='file format (json, csv, xml) (default=csv)', 
                               default='csv')
 
+    uri_parser = subparsers.add_parser('uri', help='returns URIs of stored trees')
+
     count_parser = subparsers.add_parser('count', 
                                          help='returns the number of labelled nodes in a tree')
     count_parser.add_argument('tree', help='name of tree (default=all trees)', 
@@ -393,6 +447,10 @@ def main():
         contains = set([s.strip() for s in args.contains.split(',')])
         print treestore.get_subtree(contains=contains, match_all=args.all, format=args.format),
 
+
+    elif args.command == 'uri':
+        uris = treestore.list_uris()
+        for uri in uris: print uri
 
 if __name__ == '__main__':
     main()

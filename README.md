@@ -12,7 +12,7 @@ commands:
     git clone https://github.com/bendmorris/biopython.git
     cd biopython
     git checkout cdao
-    python setup.py install
+    sudo python setup.py install
 
 ### DendroPy
 
@@ -29,6 +29,14 @@ or
 You'll also need an ODBC connection to an RDF store such as Virtuoso; help on 
 setting this up for Virtuoso is here: 
 http://docs.openlinksw.com/virtuoso/odbcimplementation.html
+
+And then, install pyodbc:
+
+    sudo pip install pyodbc
+
+or
+
+    sudo easy_install pyodbc
 
 Examples
 --------
