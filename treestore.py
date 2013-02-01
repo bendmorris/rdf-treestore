@@ -43,7 +43,7 @@ class Treestore:
             pass
 
 
-    def add_trees(self, tree_file, format, tree_name=None, bulk_loader=None):
+    def add_trees(self, tree_file, format, tree_name=None, bulk_loader=None, puid=False):
         '''Convert trees residing in a text file into RDF, and add them to the
         underlying RDF store with a context node for retrieval.
 
@@ -76,11 +76,11 @@ class Treestore:
             tmp_file.flush()
             tree_file = tmp_file.name
         
-        # Create a pseudo-unique URI for trees, if the tree name is not a URI already:
-        context = tree_name
-        if not re.match(r'\w+://', tree_name):
-            puid = sha.new(open(tree_file).read()).hexdigest()
-            context = 'http://phylotastic.org/hack2/%s/%s' % (puid, tree_name)
+        if puid:
+            # Create a pseudo-unique URI for trees, if the tree name is not a URI already:
+            if not re.match(r'\w+://', tree_name):
+                puid = sha.new(open(tree_file).read()).hexdigest()
+                tree_name = 'http://phylotastic.org/hack2/%s/%s' % (puid, tree_name)
 
         if bulk_loader:
             if self.odbc_connection == None:
@@ -109,9 +109,10 @@ class Treestore:
 
         else:
             bp.convert(tree_file, format, None, 'cdao', 
-                       storage=self.store, tree_name=tree_name, context=context)
+                       storage=self.store, tree_name=tree_name, context=tree_name)
         
         if tmp_file != None: tmp_file.close()
+
         
     def get_trees(self, tree_name):
         '''Retrieve trees that were previously added to the underlying RDF 
@@ -214,7 +215,8 @@ WHERE {
             if len(name) < 24: whitespace = ' ' * (24 - len(name))
             yield '%s%s%s' % (name, whitespace, '%s#%s' % (result['graph'], identifier))
 
-    def get_names(self, tree_name=None, format='json'):
+
+    def get_names(self, tree_name=None, format=None):
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -326,8 +328,9 @@ def main():
     add_parser = subparsers.add_parser('add', help='add trees to treestore')
     add_parser.add_argument('file', help='tree file')
     add_parser.add_argument('format', help='file format (%s)' % input_formats)
-    add_parser.add_argument('name', help='tree name (default=file name)', nargs='?', default=None)
-    add_parser.add_argument('--bulk', help='use the virtuoso bulk loader', default=None, action='store_true')
+    add_parser.add_argument('name', help='tree uri (default=file name)', nargs='?', default=None)
+    add_parser.add_argument('--bulk', help='use the virtuoso bulk loader', action='store_true')
+    add_parser.add_argument('--puid', help='create a pseudo-unique ID for the tree', action='store_true')
 
     get_parser = subparsers.add_parser('get', help='retrieve trees from treestore')
     get_parser.add_argument('name', help='tree name')
@@ -380,7 +383,7 @@ def main():
 
     if args.command == 'add':
         # parse a tree and add it to the treestore
-        treestore.add_trees(args.file, args.format, args.name, bulk_loader=args.bulk)
+        treestore.add_trees(args.file, args.format, args.name, bulk_loader=args.bulk, puid=args.puid)
         
     elif args.command == 'get':
         # get a tree, serialize in specified format, and output to stdout
