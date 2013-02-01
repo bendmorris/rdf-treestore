@@ -8,6 +8,7 @@ import sys
 import urlparse
 import tempfile
 import pyodbc
+import pruner
 from cStringIO import StringIO
 
 
@@ -16,7 +17,7 @@ treestore_dir = '/home/ben/Dev/treestore/'
 
 class Treestore:
     def __init__(self, storage_name='virtuoso', dsn='Virtuoso', 
-                 user='dba', password='dba', options_string=None, storage=None, bulk_loader=False):
+                 user='dba', password='dba', options_string=None, storage=None):
         '''Create a treestore object from an ODBC connection with given DSN,
         username and password.'''
 
@@ -28,10 +29,11 @@ class Treestore:
                                      % (dsn, user, password)
                                      if not options_string else options_string
                                      )
-            self.odbc_connection = pyodbc.connect('DSN=%s;UID=%s;PWD=%s' % (dsn, user, password))
+            self.odbc_connection = pyodbc.connect('DSN=%s;UID=%s;PWD=%s' % (dsn, user, password),
+                                                  autocommit=True)
 
 
-    def add_trees(self, tree_file, format, tree_name=None):
+    def add_trees(self, tree_file, format, tree_name=None, bulk_loader=False):
         '''Convert trees residing in a text file into RDF, and add them to the
         underlying RDF store with a context node for retrieval.
 
@@ -79,8 +81,6 @@ class Treestore:
 
             cursor.execute('DELETE FROM DB.DBA.load_list')
         
-            self.odbc_connection.commit()
-        
             if tmp_file != None: tmp_file.close()
 
         else:
@@ -117,7 +117,7 @@ class Treestore:
         if format == 'cdao':
             bp.write(trees, s, format, tree_name=tree_name)
         elif format == 'ascii':
-            bp._utils.draw_ascii(trees.next())
+            bp._utils.draw_ascii((i for i in trees).next())
         else:
             bp.write(trees, s, format)
 
@@ -128,7 +128,6 @@ class Treestore:
         context = RDF.Node(RDF.Uri(tree_name))
         cursor = self.odbc_connection.cursor()
         cursor.execute('sparql clear graph <%s>' % tree_name)
-        self.odbc_connection.commit()
 
 
     def list_trees(self, contains=[], match_all=False, show_match_counts=False):
@@ -153,13 +152,15 @@ ORDER BY DESC(?matches)
         #print query
         cursor = self.odbc_connection.cursor()
         cursor.execute(query)
-        self.odbc_connection.commit()
         results = cursor
         
         for result in results:
             if (not match_all) or int(str(result['matches']))==len(contains):
                 yield str(result[0]) + (' (%s)' % result[1] 
-                                              if (contains and not match_all and show_match_counts) else '') 
+                                         if (contains 
+                                         and not match_all 
+                                         and show_match_counts) 
+                                         else '') 
 
 
     def get_names(self, tree_name=None, format='json'):
@@ -182,7 +183,6 @@ ORDER BY ?label
         #print query
         cursor = self.odbc_connection.cursor()
         cursor.execute(query)
-        self.odbc_connection.commit()
 
         results = cursor
         
@@ -204,17 +204,34 @@ ORDER BY ?label
 
 
     def get_subtree(self, contains=[], contains_ids=[], match_all=False, format='newick'):
-        # TODO: rewrite this using SPARQL (ideally after Virtuoso starts supporting property paths)
-        # TODO: use contains_ids to find nodes by URI, then find common ancestor
-        # this will be more reasonable when this query switches to SPARQL
         if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
         trees = self.list_trees(contains=contains, match_all=match_all)
         try:
             tree = trees.next()
         except StopIteration:
             raise Exception("An appropriate tree for this query couldn't be found.")
-        context = RDF.Node(RDF.Uri(tree))
-        model = RDF.Model(self.store)
+        
+        mrca = pruner.mrca(list(contains), self, tree)
+        
+        root = bp.CDAO.Clade()
+        nodes = {}
+        nodes[mrca] = root
+        stmts = pruner.subtree(mrca, self, tree)
+        redo = True
+        
+        while redo:
+            redo = []
+            for stmt in stmts:
+                node_id, edge_length, parent, label = stmt
+                if parent in nodes:
+                    clade = bp.CDAO.Clade(name=label, branch_length=float(edge_length) if edge_length else None)
+                    nodes[node_id] = clade
+                    nodes[parent].clades.append(clade)
+                else:
+                    redo.append(stmt)
+            stmts = redo
+            
+        tree = bp.CDAO.Tree(root=root, rooted=True)
         
         def prune_extra_clades(tree, clade, root=True):
             result = 0
@@ -227,7 +244,6 @@ ORDER BY ?label
                 except: return 0
             return result
 
-        tree = self.get_trees(tree).next()
         terms = [c.name for c in tree.get_terminals()]
         for term in terms:
             if not term in contains:
@@ -236,8 +252,8 @@ ORDER BY ?label
                any([tree.prune(term) for term in tree.get_terminals() if not term.name])):
             pass
 
-        return self.serialize_trees(trees=(t for t in [tree]), format=format)
-        
+        return self.serialize_trees(trees=[tree], format=format)
+
 
 
 def main():
@@ -374,7 +390,7 @@ def main():
         print treestore.get_names(tree_name=args.tree, format=args.format)
 
     elif args.command == 'count':
-        print treestore.get_names(tree_name=args.tree, format=None)
+        print len([r for r in treestore.get_names(tree_name=args.tree, format=None)])
 
     elif args.command == 'prune':
         contains = set([s.strip() for s in args.contains.split(',')])
