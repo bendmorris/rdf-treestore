@@ -30,6 +30,14 @@ You'll also need an ODBC connection to an RDF store such as Virtuoso; help on
 setting this up for Virtuoso is here: 
 http://docs.openlinksw.com/virtuoso/odbcimplementation.html
 
+And then, install pyodbc:
+
+    sudo pip install pyodbc
+
+or
+
+    sudo easy_install pyodbc
+
 Examples
 --------
 
