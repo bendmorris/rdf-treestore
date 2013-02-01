@@ -238,6 +238,16 @@ ORDER BY ?label
         results = cursor
         
         if format == 'json':
+            metadata = {
+                "version":"",
+                "treestoreMetadata":{
+                    "treestoreShortName":"rdf_treestore",
+                    "treestoreLongName":"Phylotastic RDF Treestore",
+                    "domain":"",
+                    "urlPrefix":"",
+                }
+            }
+
             json_dict = {'metadata': {}, 'externalSources': {},
                          'names': [{
                                     'name': str(result[1]),
