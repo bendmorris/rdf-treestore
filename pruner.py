@@ -86,13 +86,13 @@ PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
 SELECT ?n ?length ?parent ?label
 WHERE {
-    GRAPH <bird2000> {
+    GRAPH <%s> {
         ?n obo:CDAO_0000144 <%s> .
         OPTIONAL { ?n obo:CDAO_0000187 ?tu . ?tu rdf:label ?label . }
         OPTIONAL { ?n obo:CDAO_0000143 ?edge . OPTIONAL { ?edge obo:CDAO_0000193 [ obo:CDAO_0000215 ?length ] . } }
         OPTIONAL { ?n obo:CDAO_0000179 ?parent . }
     }
-}''' % mrca
+}''' % (graph, mrca)
 
     cursor.execute(query)
     
