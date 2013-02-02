@@ -1,15 +1,14 @@
 import Bio.Phylo as bp
 import RDF
-import Redland_python
 import dendropy
 import os
 import re
 import sha
 import sys
-import urlparse
 import tempfile
 import pyodbc
 import pruner
+import annotate
 from cStringIO import StringIO
 
 
@@ -51,16 +50,6 @@ class Treestore:
         '''
         
         if tree_name is None: tree_name = os.path.basename(tree_file)
-
-        # If the source is an N-Triples file, then import it "as is":
-        if format == 'ntriples':
-            model = RDF.Model(self.store)
-            file_model = RDF.Model()
-            RDF.Parser(name = 'ntriples').parse_into_model(file_model, 'file://%s' % os.path.abspath(tree_file))
-            for triple in file_model:
-                model.add_statement(triple, RDF.Node(RDF.Uri(tree_name)))
-            model.sync()
-            return
 
         # All other formats are processed:
 
@@ -258,7 +247,7 @@ def main():
     import argparse
 
     bp_formats = ' | '.join(bp._io.supported_formats)
-    input_formats = '%s | ntriples' % bp_formats
+    input_formats = bp_formats
     output_formats = '%s | ascii' % bp_formats
 
     parser = argparse.ArgumentParser()
@@ -315,6 +304,11 @@ def main():
                               action='store_true')
     query_parser.add_argument('--complete', help="return complete subtree from MRCA; don't prune other taxa from the resulting tree",
                               action='store_true')
+
+    ann_parser = subparsers.add_parser('annotate', help='annotate tree with triples from RDF file')
+    ann_parser.add_argument('file', help='annotation file')
+    ann_parser.add_argument('format', help='annotation file format (default=ntriples)')
+    ann_parser.add_argument('name', help='tree uri', default=None)
 
     args = parser.parse_args()
 
@@ -393,6 +387,9 @@ def main():
     elif args.command == 'query':
         contains = set([s.strip() for s in args.contains.split(',')])
         print treestore.get_subtree(contains=contains, match_all=args.all, format=args.format, prune=not args.complete),
+
+    elif args.command == 'annotate':
+        annotate(args.name, args.file, treestore, format=args.format)
 
 
 if __name__ == '__main__':
