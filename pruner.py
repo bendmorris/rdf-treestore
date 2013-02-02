@@ -145,4 +145,4 @@ WHERE {
                any([tree.prune(term) for term in tree.get_terminals() if not term.name])):
             pass
 
-        return tree
+    return tree

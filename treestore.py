@@ -140,8 +140,8 @@ class Treestore:
 
         if trees is None: 
             trees = [i for i in self.get_trees(tree_name)]
-            if not trees:
-                raise Exception('Tree to be serialized not found.')
+        if not trees:
+            raise Exception('Tree to be serialized not found.')
 
         s = StringIO()
         if format == 'cdao':
@@ -268,7 +268,7 @@ ORDER BY ?label
             return results
 
 
-    def get_subtree(self, contains=[], contains_ids=[], match_all=False, format='newick'):
+    def get_subtree(self, contains=[], contains_ids=[], match_all=False, format='newick', prune=True):
         if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
         trees = self.list_trees(contains=contains, match_all=match_all)
         try:
@@ -277,7 +277,7 @@ ORDER BY ?label
             raise Exception("An appropriate tree for this query couldn't be found.")
         
         mrca = pruner.mrca(list(contains), self, tree_name)
-        tree = pruner.subtree(mrca, self, tree_name, prune=contains)
+        tree = pruner.subtree(mrca, self, tree_name, prune=contains if prune else False)
 
         return self.serialize_trees(trees=[tree], format=format)
 
@@ -337,14 +337,16 @@ def main():
     count_parser.add_argument('tree', help='name of tree (default=all trees)', 
                               nargs='?', default=None)
 
-    prune_parser = subparsers.add_parser('prune', 
+    query_parser = subparsers.add_parser('query', 
                                          help='retrieve the best subtree containing a given set of taxa')
-    prune_parser.add_argument('contains', 
+    query_parser.add_argument('contains', 
         help='comma-delimited list of species that must be contained in each returned tree',
         nargs='?')
-    prune_parser.add_argument('format', help='serialization format (%s) (default=newick)' % output_formats, 
+    query_parser.add_argument('format', help='serialization format (%s) (default=newick)' % output_formats, 
                               nargs='?', default='newick')
-    prune_parser.add_argument('--all', help='only return trees that contain all given species', 
+    query_parser.add_argument('--all', help='only return trees that contain all given species', 
+                              action='store_true')
+    query_parser.add_argument('--complete', help="return complete subtree from MRCA; don't prune other taxa from the resulting tree",
                               action='store_true')
 
     args = parser.parse_args()
@@ -422,10 +424,9 @@ def main():
     elif args.command == 'count':
         print len([r for r in treestore.get_names(tree_name=args.tree, format=None)])
 
-    elif args.command == 'prune':
+    elif args.command == 'query':
         contains = set([s.strip() for s in args.contains.split(',')])
-        print treestore.get_subtree(contains=contains, match_all=args.all, format=args.format),
-
+        print treestore.get_subtree(contains=contains, match_all=args.all, format=args.format, prune=not args.complete),
 
     elif args.command == 'uri':
         uris = treestore.list_uris()
