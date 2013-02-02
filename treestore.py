@@ -41,7 +41,7 @@ class Treestore:
             pass
 
 
-    def add_trees(self, tree_file, format, tree_name=None, bulk_loader=None, puid=False):
+    def add_trees(self, tree_file, format, tree_uri=None, bulk_loader=None, puid=False):
         '''Convert trees residing in a text file into RDF, and add them to the
         underlying RDF store with a context node for retrieval.
 
@@ -49,7 +49,7 @@ class Treestore:
         >>> treestore.add_trees('test.newick', 'newick', 'test')
         '''
         
-        if tree_name is None: tree_name = os.path.basename(tree_file)
+        if tree_uri is None: tree_uri = os.path.basename(tree_file)
 
         # All other formats are processed:
 
@@ -66,9 +66,9 @@ class Treestore:
         
         if puid:
             # Create a pseudo-unique URI for trees, if the tree name is not a URI already:
-            if not re.match(r'\w+://', tree_name):
+            if not re.match(r'\w+://', tree_uri):
                 puid = sha.new(open(tree_file).read()).hexdigest()
-                tree_name = 'http://phylotastic.org/hack2/%s/%s' % (puid, tree_name)
+                tree_uri = 'http://phylotastic.org/hack2/%s/%s' % (puid, tree_uri)
 
         if bulk_loader:
             if self.odbc_connection == None:
@@ -76,15 +76,15 @@ class Treestore:
                 return
 
             bp.convert(tree_file, format, os.path.join(treestore_dir, 'temp.cdao'), 'cdao', 
-                       tree_name=tree_name)
+                       tree_uri=tree_uri)
         
             cursor = self.odbc_connection.cursor()
         
             update_stmt = 'sparql load <file://%s> into <%s>' % (
-                os.path.abspath(os.path.join(treestore_dir, 'temp.cdao')), tree_name)
+                os.path.abspath(os.path.join(treestore_dir, 'temp.cdao')), tree_uri)
         
             load_stmt = "ld_dir ('%s', 'temp.cdao', '%s')" % (
-                os.path.abspath(treestore_dir), tree_name)
+                os.path.abspath(treestore_dir), tree_uri)
             print load_stmt
             cursor.execute(load_stmt)
         
@@ -97,12 +97,12 @@ class Treestore:
 
         else:
             bp.convert(tree_file, format, None, 'cdao', 
-                       storage=self.store, tree_name=tree_name, context=tree_name)
+                       storage=self.store, tree_uri=tree_uri, context=tree_uri)
         
         if tmp_file != None: tmp_file.close()
 
         
-    def get_trees(self, tree_name):
+    def get_trees(self, tree_uri):
         '''Retrieve trees that were previously added to the underlying RDF 
         store. Returns a generator of Biopython trees.
 
@@ -112,12 +112,12 @@ class Treestore:
         Tree(weight=1.0, rooted=False)
         '''
         
-        #return pruner.subtree(None, self, tree_name).next()
+        #return pruner.subtree(None, self, tree_uri).next()
         parser = bp.CDAOIO.Parser()
-        return parser.parse_model(RDF.Model(self.store), context=tree_name)
+        return parser.parse_model(RDF.Model(self.store), context=tree_uri)
         
 
-    def serialize_trees(self, tree_name='', format='newick', trees=None):
+    def serialize_trees(self, tree_uri='', format='newick', trees=None):
         '''Retrieve trees serialized to any format supported by Biopython.
         
         Current options include 'newick', 'nexus', 'phyloxml', 'nexml', and 'cdao'
@@ -127,13 +127,13 @@ class Treestore:
         '''
 
         if trees is None: 
-            trees = [i for i in self.get_trees(tree_name)]
+            trees = [i for i in self.get_trees(tree_uri)]
         if not trees:
             raise Exception('Tree to be serialized not found.')
 
         s = StringIO()
         if format == 'cdao':
-            bp.write(trees, s, format, tree_name=tree_name)
+            bp.write(trees, s, format, tree_uri=tree_uri)
         elif format == 'ascii':
             bp._utils.draw_ascii((i for i in trees).next())
         else:
@@ -142,10 +142,10 @@ class Treestore:
         return s.getvalue()
 
 
-    def remove_trees(self, tree_name):
-        context = RDF.Node(RDF.Uri(tree_name))
+    def remove_trees(self, tree_uri):
+        context = RDF.Node(RDF.Uri(tree_uri))
         cursor = self.odbc_connection.cursor()
-        cursor.execute('sparql clear graph <%s>' % tree_name)
+        cursor.execute('sparql clear graph <%s>' % tree_uri)
 
 
     def list_trees(self, contains=[], match_all=False, show_match_counts=False):
@@ -180,7 +180,7 @@ ORDER BY DESC(?matches)
                                          else '') 
 
 
-    def get_names(self, tree_name=None, format=None):
+    def get_names(self, tree_uri=None, format=None):
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
@@ -193,7 +193,7 @@ WHERE {
     }
 }
 ORDER BY ?label
-''' % (('<%s>' % tree_name) if tree_name else '?graph')
+''' % (('<%s>' % tree_uri) if tree_uri else '?graph')
         
         #print query
         cursor = self.odbc_connection.cursor()
@@ -232,12 +232,12 @@ ORDER BY ?label
         if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
         trees = self.list_trees(contains=contains, match_all=match_all)
         try:
-            tree_name = trees.next()
+            tree_uri = trees.next()
         except StopIteration:
             raise Exception("An appropriate tree for this query couldn't be found.")
         
-        mrca = pruner.mrca(list(contains), self, tree_name)
-        tree = pruner.subtree(mrca, self, tree_name, prune=contains if prune else False)
+        mrca = pruner.mrca(list(contains), self, tree_uri)
+        tree = pruner.subtree(mrca, self, tree_uri, prune=contains if prune else False)
 
         return self.serialize_trees(trees=[tree], format=format)
 
@@ -262,17 +262,17 @@ def main():
     add_parser = subparsers.add_parser('add', help='add trees to treestore')
     add_parser.add_argument('file', help='tree file')
     add_parser.add_argument('format', help='file format (%s)' % input_formats)
-    add_parser.add_argument('name', help='tree uri (default=file name)', nargs='?', default=None)
+    add_parser.add_argument('uri', help='tree uri (default=file name)', nargs='?', default=None)
     add_parser.add_argument('--bulk', help='use the virtuoso bulk loader', action='store_true')
     add_parser.add_argument('--puid', help='create a pseudo-unique ID for the tree', action='store_true')
 
     get_parser = subparsers.add_parser('get', help='retrieve trees from treestore')
-    get_parser.add_argument('name', help='tree name')
+    get_parser.add_argument('uri', help='tree uri')
     get_parser.add_argument('format', help='serialization format (%s) (default=newick)' % output_formats, 
                             nargs='?', default='newick')
 
     rm_parser = subparsers.add_parser('rm', help='remove trees from treestore')
-    rm_parser.add_argument('name', help='tree name')
+    rm_parser.add_argument('uri', help='tree uri')
 
     ls_parser = subparsers.add_parser('ls', help='list all trees in treestore')
     ls_parser.add_argument('contains', 
@@ -308,7 +308,7 @@ def main():
     ann_parser = subparsers.add_parser('annotate', help='annotate tree with triples from RDF file')
     ann_parser.add_argument('file', help='annotation file')
     ann_parser.add_argument('format', help='annotation file format (default=ntriples)')
-    ann_parser.add_argument('name', help='tree uri', default=None)
+    ann_parser.add_argument('uri', help='tree uri', default=None)
 
     args = parser.parse_args()
 
@@ -321,15 +321,15 @@ def main():
 
     if args.command == 'add':
         # parse a tree and add it to the treestore
-        treestore.add_trees(args.file, args.format, args.name, bulk_loader=args.bulk, puid=args.puid)
+        treestore.add_trees(args.file, args.format, args.uri, bulk_loader=args.bulk, puid=args.puid)
         
     elif args.command == 'get':
         # get a tree, serialize in specified format, and output to stdout
-        print treestore.serialize_trees(args.name, args.format),
+        print treestore.serialize_trees(args.uri, args.format),
         
     elif args.command == 'rm':
         # remove a certain tree from the treestore
-        treestore.remove_trees(args.name)
+        treestore.remove_trees(args.uri)
         
     elif args.command == 'ls':
         # list all trees in the treestore
@@ -379,17 +379,17 @@ def main():
 
 
     elif args.command == 'names':
-        print treestore.get_names(tree_name=args.tree, format=args.format)
+        print treestore.get_names(tree_uri=args.tree, format=args.format)
 
     elif args.command == 'count':
-        print len([r for r in treestore.get_names(tree_name=args.tree, format=None)])
+        print len([r for r in treestore.get_names(tree_uri=args.tree, format=None)])
 
     elif args.command == 'query':
         contains = set([s.strip() for s in args.contains.split(',')])
         print treestore.get_subtree(contains=contains, match_all=args.all, format=args.format, prune=not args.complete),
 
     elif args.command == 'annotate':
-        annotate(args.name, args.file, treestore, format=args.format)
+        annotate(args.uri, args.file, treestore, format=args.format)
 
 
 if __name__ == '__main__':
