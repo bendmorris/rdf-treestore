@@ -6,7 +6,7 @@ This is an implementation of a phylogenetic tree store with an RDF backend.
 ### BioPython
 
 treestore requires the librdf Python bindings (http://librdf.org/docs/python.html)
-and the author's fork of Biopython. You can install this fork using the following 
+and the author's fork of BioPython. You can install this fork using the following 
 commands:
 
     git clone https://github.com/bendmorris/biopython.git
@@ -16,7 +16,9 @@ commands:
 
 ### DendroPy
 
-For working with Nexus files, then you will also need to install DendroPy:
+BioPython currently has issues with Nexus file parsing. Until this can be resolved,
+we are circumventing the issue by using DendroPy, so you'll need to install that 
+as well:
 
     sudo pip install dendropy
 
@@ -26,8 +28,9 @@ or
 
 ### Virtuoso ODBC connection
 
-You'll also need an ODBC connection to an RDF store such as Virtuoso; help on 
-setting this up for Virtuoso is here: 
+You'll also need an ODBC connection to an RDF store such as Virtuoso. 
+Help on setting this up for Virtuoso is here: 
+
 http://docs.openlinksw.com/virtuoso/odbcimplementation.html
 
 And then, install pyodbc:
@@ -47,8 +50,8 @@ Try it out:
 
     >>> from treestore import Treestore
     >>> t = Treestore()
-    >>> t.add_trees('test.newick', 'newick', 'test')
-    >>> trees = t.get_trees('test')
+    >>> t.add_trees('test.newick', 'newick', 'http://www.example.org/test/')
+    >>> trees = t.get_trees('http://www.example.org/test/')
     >>> trees.next()
     Tree(weight=1.0, rooted=False)
     >>> print t.serialize_trees('test', 'nexml')
@@ -58,9 +61,9 @@ Try it out:
     
 Or from the command line:
 
-    treestore add test.newick newick test
-    treestore get test nexml
-    treestore rm test
+    treestore add test.newick newick http://www.example.org/test/
+    treestore get http://www.example.org/test/ nexml
+    treestore rm http://www.example.org/test/
 
 If you're not using Virtuoso, or you need to change connection parameters,
 refer to the command-line help menu:
