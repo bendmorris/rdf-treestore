@@ -18,7 +18,7 @@ treestore_dir = '/home/ben/Dev/treestore/'
 
 class Treestore:
     def __init__(self, storage_name='virtuoso', dsn='Virtuoso', 
-                 user='dba', password='dba', options_string=None, storage=None):
+                 user='dba', password='dba', storage=None):
         '''Create a treestore object from an ODBC connection with given DSN,
         username and password.'''
 
@@ -29,7 +29,6 @@ class Treestore:
                 self.store = RDF.Storage(storage_name=storage_name, name='db',
                                          options_string="dsn='%s',user='%s',password='%s'" 
                                          % (dsn, user, password)
-                                         if not options_string else options_string
                                          )
         except:
             # if Redland's Virtuoso storage fails, don't create this store now
@@ -296,8 +295,6 @@ def main():
     parser.add_argument('-d', '--dsn', help='ODBC DSN (default=Virtuoso)')
     parser.add_argument('-u', '--user', help='ODBC user (default=dba)')
     parser.add_argument('-p', '--password', help='ODBC password (default=dba)')
-    parser.add_argument('-o', '--option', 
-        help='options_string for Redland store; if this option is provided, dsn/user/password options are ignored')
 
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
 
@@ -356,7 +353,6 @@ def main():
     if args.dsn: kwargs['dsn'] = args.dsn
     if args.user: kwargs['user'] = args.user
     if args.password: kwargs['password'] = args.password
-    if args.option: kwargs['options_string'] = args.option
     treestore = Treestore(**kwargs)
 
     if args.command == 'add':
