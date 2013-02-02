@@ -124,6 +124,7 @@ class Treestore:
         Tree(weight=1.0, rooted=False)
         '''
         
+        #return pruner.subtree(None, self, tree_name).next()
         parser = bp.CDAOIO.Parser()
         return parser.parse_model(RDF.Model(self.store), context=tree_name)
         
@@ -137,7 +138,10 @@ class Treestore:
         >>> treestore.serialize_trees('test')
         '''
 
-        if trees is None: trees = self.get_trees(tree_name)
+        if trees is None: 
+            trees = [i for i in self.get_trees(tree_name)]
+            if not trees:
+                raise Exception('Tree to be serialized not found.')
 
         s = StringIO()
         if format == 'cdao':
@@ -268,50 +272,12 @@ ORDER BY ?label
         if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
         trees = self.list_trees(contains=contains, match_all=match_all)
         try:
-            tree = trees.next()
+            tree_name = trees.next()
         except StopIteration:
             raise Exception("An appropriate tree for this query couldn't be found.")
         
-        mrca = pruner.mrca(list(contains), self, tree)
-        
-        root = bp.CDAO.Clade()
-        nodes = {}
-        nodes[mrca] = root
-        stmts = pruner.subtree(mrca, self, tree)
-        redo = True
-        
-        while redo:
-            redo = []
-            for stmt in stmts:
-                node_id, edge_length, parent, label = stmt
-                if parent in nodes:
-                    clade = bp.CDAO.Clade(name=label, branch_length=float(edge_length) if edge_length else None)
-                    nodes[node_id] = clade
-                    nodes[parent].clades.append(clade)
-                else:
-                    redo.append(stmt)
-            stmts = redo
-            
-        tree = bp.CDAO.Tree(root=root, rooted=True)
-        
-        def prune_extra_clades(tree, clade, root=True):
-            result = 0
-            for child in clade.clades:
-                result += prune_extra_clades(tree, child, False)
-            if not root and len(clade) < 2 and not clade.name:
-                try: 
-                    tree.collapse(clade)
-                    return 1
-                except: return 0
-            return result
-
-        terms = [c.name for c in tree.get_terminals()]
-        for term in terms:
-            if not term in contains:
-                tree.prune(term)
-        while (prune_extra_clades(tree, tree.clade) or 
-               any([tree.prune(term) for term in tree.get_terminals() if not term.name])):
-            pass
+        mrca = pruner.mrca(list(contains), self, tree_name)
+        tree = pruner.subtree(mrca, self, tree_name, prune=contains)
 
         return self.serialize_trees(trees=[tree], format=format)
 
