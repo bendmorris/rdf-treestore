@@ -190,34 +190,6 @@ ORDER BY DESC(?matches)
                                          and show_match_counts) 
                                          else '') 
 
-    def list_uris(self):
-        model = RDF.Model(self.store)
-
-        query = '''
-PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-
-SELECT DISTINCT ?graph ?uri
-WHERE {
-    GRAPH ?graph {
-        { ?s obo:CDAO_0000200 ?uri . }
-    }
-} 
-'''
-
-        query = RDF.SPARQLQuery(query)
-        
-        def handler(*args): pass
-        Redland_python.set_callback(handler)
-        results = query.execute(model)
-        Redland_python.reset_callback()
-
-        for result in results:
-            name, separator, identifier = str(result['uri']).partition('#')
-            whitespace = ' '
-            if len(name) < 24: whitespace = ' ' * (24 - len(name))
-            yield '%s%s%s' % (name, whitespace, '%s#%s' % (result['graph'], identifier))
-
 
     def get_names(self, tree_name=None, format=None):
         query = '''sparql
@@ -327,8 +299,6 @@ def main():
     names_parser.add_argument('-f', '--format', help='file format (json, csv, xml) (default=csv)', 
                               default='csv')
 
-    uri_parser = subparsers.add_parser('uri', help='returns URIs of stored trees')
-
     count_parser = subparsers.add_parser('count', 
                                          help='returns the number of labelled nodes in a tree')
     count_parser.add_argument('tree', help='name of tree (default=all trees)', 
@@ -424,9 +394,6 @@ def main():
         contains = set([s.strip() for s in args.contains.split(',')])
         print treestore.get_subtree(contains=contains, match_all=args.all, format=args.format, prune=not args.complete),
 
-    elif args.command == 'uri':
-        uris = treestore.list_uris()
-        for uri in uris: print uri
 
 if __name__ == '__main__':
     main()
