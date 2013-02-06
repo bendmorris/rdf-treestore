@@ -63,6 +63,7 @@ Or from the command line:
 
     treestore add test.newick newick http://www.example.org/test/
     treestore get http://www.example.org/test/ nexml
+    treestore query http://www.example.org/test/ "Homo sapiens,Rattus norvegicus,Mus musculus" ascii
     treestore rm http://www.example.org/test/
 
 If you're not using Virtuoso, or you need to change connection parameters,
