@@ -44,12 +44,10 @@ class Treestore:
         underlying RDF store with a context node for retrieval.
 
         Example:
-        >>> treestore.add_trees('test.newick', 'newick', 'test')
+        >>> treestore.add_trees('test.newick', 'newick', 'http://www.example.org/test/')
         '''
         
         if tree_uri is None: tree_uri = os.path.basename(tree_file)
-
-        # All other formats are processed:
 
         if puid:
             # Create a pseudo-unique URI for trees, if the tree name is not a URI already:
@@ -81,7 +79,6 @@ class Treestore:
 
             cursor.execute('DELETE FROM DB.DBA.load_list')
         
-
         else:
             bp.convert(tree_file, format, None, 'cdao', 
                        storage=self.store, tree_uri=tree_uri, context=tree_uri)
@@ -94,7 +91,7 @@ class Treestore:
         store. Returns a generator of Biopython trees.
 
         Example:
-        >>> trees = treestore.get_trees('test')
+        >>> trees = treestore.get_trees('http://www.example.org/test/')
         >>> trees.next()
         Tree(weight=1.0, rooted=False)
         '''
@@ -110,7 +107,7 @@ class Treestore:
         Current options include 'newick', 'nexus', 'phyloxml', 'nexml', and 'cdao'
 
         Example:
-        >>> treestore.serialize_trees('test')
+        >>> treestore.serialize_trees('http://www.example.org/test/')
         '''
 
         if trees is None: 
@@ -130,13 +127,27 @@ class Treestore:
 
 
     def remove_trees(self, tree_uri):
-        context = RDF.Node(RDF.Uri(tree_uri))
+        '''Remove trees from treestore. Be careful with this; it really just
+        removes a named graph, so if Virtuoso contains named graphs other than
+        trees, those can be deleted too.
+
+        Example:
+        >>> treestore.remove_trees('http://www.example.org/test/')
+        '''
+
         cursor = self.odbc_connection.cursor()
         cursor.execute('sparql clear graph <%s>' % tree_uri)
 
 
     def list_trees(self, contains=[], match_all=False, show_match_counts=False):
-        # TODO: use the smaller tree in the event of a match tie for efficiency
+        '''List all trees in the treestore. Use `contains` to find trees that
+        contain one or more specified taxa; `match_all` to find only trees that
+        contain all of the listed taxa.
+
+        Example:
+        >>> treestore.remove_trees('http://www.example.org/test/')
+        '''
+        # TODO: use the smaller tree in the event of a match tie for efficiency?
 
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
