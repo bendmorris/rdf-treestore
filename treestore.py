@@ -1,11 +1,9 @@
 import Bio.Phylo as bp
 import RDF
-import dendropy
 import os
 import re
 import sha
 import sys
-import tempfile
 import pyodbc
 import pruner
 import annotate
@@ -53,17 +51,6 @@ class Treestore:
 
         # All other formats are processed:
 
-        # NEXUS files are not properly handled by BioPython (Jan 2013), so convert them
-        # to Newick format with DendroPy:
-        tmp_file = None
-        if format == 'nexus':
-            tree = dendropy.Tree(stream=open(tree_file), schema=format)
-            format = 'newick' 
-            tmp_file = tempfile.NamedTemporaryFile()
-            tmp_file.write(re.sub(r'\[.*\]\s*', '', tree.as_string(format)))
-            tmp_file.flush()
-            tree_file = tmp_file.name
-        
         if puid:
             # Create a pseudo-unique URI for trees, if the tree name is not a URI already:
             if not re.match(r'\w+://', tree_uri):
