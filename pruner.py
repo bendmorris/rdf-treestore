@@ -17,9 +17,9 @@ SELECT ?mrca (count(?mrca_ancestor) as ?mrca_ancestors)
 WHERE {
     GRAPH <%s> {
 
-        [] obo:CDAO_0000179 ?mrca option(transitive) ;
+        ?t1 obo:CDAO_0000179 ?mrca option(transitive) ;
            obo:CDAO_0000187 [ rdf:label "%s" ] .
-        [] obo:CDAO_0000179 ?mrca option(transitive) ;
+        ?t2 obo:CDAO_0000179 ?mrca option(transitive) ;
            obo:CDAO_0000187 [ rdf:label "%s" ] .
         OPTIONAL { ?mrca obo:CDAO_0000179 ?mrca_ancestor option(transitive) }
     }
@@ -100,7 +100,7 @@ WHERE {
         OPTIONAL { ?edge obo:CDAO_0000193 [ obo:CDAO_0000215 ?length ] . }
         OPTIONAL { ?n obo:CDAO_0000179 ?parent . }
     }
-}''' % (graph, ('?n obo:CDAO_0000179 <%s> option_transitive .' % mrca) if mrca else '')
+}''' % (graph, ('?n obo:CDAO_0000179 <%s> option(transitive) .' % mrca) if mrca else '')
     cursor.execute(query)
     
     root = bp.CDAO.Clade()
