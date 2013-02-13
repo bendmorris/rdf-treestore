@@ -83,8 +83,6 @@ class Treestore:
             bp.convert(tree_file, format, None, 'cdao', 
                        storage=self.store, tree_uri=tree_uri, context=tree_uri)
         
-        if tmp_file != None: tmp_file.close()
-
         
     def get_trees(self, tree_uri):
         '''Retrieve trees that were previously added to the underlying RDF 
