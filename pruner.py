@@ -17,11 +17,11 @@ SELECT ?mrca (count(?mrca_ancestor) as ?mrca_ancestors)
 WHERE {
     GRAPH <%s> {
 
-        [] obo:CDAO_0000144 ?mrca ;
+        [] obo:CDAO_0000179 ?mrca option(transitive) ;
            obo:CDAO_0000187 [ rdf:label "%s" ] .
-        [] obo:CDAO_0000144 ?mrca ;
+        [] obo:CDAO_0000179 ?mrca option(transitive) ;
            obo:CDAO_0000187 [ rdf:label "%s" ] .
-        OPTIONAL { ?mrca obo:CDAO_0000144 ?mrca_ancestor }
+        OPTIONAL { ?mrca obo:CDAO_0000179 ?mrca_ancestor option(transitive) }
     }
 }
 GROUP BY ?mrca
@@ -43,7 +43,7 @@ PREFIX obo: <http://purl.obolibrary.org/obo/>
 ASK {
     GRAPH <%s> {
         ?n obo:CDAO_0000187 [ rdf:label "%s" ] ;
-           obo:CDAO_0000144 <%s> .
+           obo:CDAO_0000179 <%s> option(transitive) .
     }
 }
 ''' % (graph, taxon, mrca)
@@ -63,9 +63,9 @@ WHERE {
     GRAPH <%s> {
         
         ?n obo:CDAO_0000187 [ rdf:label "%s" ] ;
-           obo:CDAO_0000144 ?mrca .
-        <%s> obo:CDAO_0000144 ?mrca .
-        OPTIONAL { ?mrca obo:CDAO_0000144 ?mrca_ancestor }
+           obo:CDAO_0000179 ?mrca option(transitive) .
+        <%s> obo:CDAO_0000179 ?mrca option(transitive) .
+        OPTIONAL { ?mrca obo:CDAO_0000179 ?mrca_ancestor option(transitive) }
     }
 }
 GROUP BY ?mrca
@@ -100,7 +100,7 @@ WHERE {
         OPTIONAL { ?edge obo:CDAO_0000193 [ obo:CDAO_0000215 ?length ] . }
         OPTIONAL { ?n obo:CDAO_0000179 ?parent . }
     }
-}''' % (graph, ('?n obo:CDAO_0000144 <%s> .' % mrca) if mrca else '')
+}''' % (graph, ('?n obo:CDAO_0000179 <%s> option_transitive .' % mrca) if mrca else '')
     cursor.execute(query)
     
     root = bp.CDAO.Clade()
