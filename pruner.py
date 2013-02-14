@@ -13,11 +13,11 @@ def mrca(taxa, treestore, graph):
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-SELECT ?mrca (count(?mrca_ancestor) as ?mrca_ancestors)
+SELECT ?mrca ?steps
 WHERE {
     GRAPH <%s> {
 
-        ?t1 obo:CDAO_0000179 ?mrca option(transitive) ;
+        ?t1 obo:CDAO_0000179 ?mrca option(transitive, t_step('step_no') as ?steps) ;
            obo:CDAO_0000187 [ rdf:label "%s" ] .
         ?t2 obo:CDAO_0000179 ?mrca option(transitive) ;
            obo:CDAO_0000187 [ rdf:label "%s" ] .
@@ -25,7 +25,8 @@ WHERE {
     }
 }
 GROUP BY ?mrca
-ORDER BY desc(?mrca_ancestors)
+ORDER BY desc(?steps)
+LIMIT 1
 ''' % (graph, taxa[0], taxa[1],)
     
     cursor.execute(query)
@@ -58,18 +59,18 @@ PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
 
-SELECT ?mrca (count(?mrca_ancestor) as ?mrca_ancestors)
+SELECT ?mrca ?steps
 WHERE {
     GRAPH <%s> {
         
         ?n obo:CDAO_0000187 [ rdf:label "%s" ] ;
-           obo:CDAO_0000179 ?mrca option(transitive) .
+           obo:CDAO_0000179 ?mrca option(transitive, t_step('step_no') as ?steps) .
         <%s> obo:CDAO_0000179 ?mrca option(transitive) .
-        OPTIONAL { ?mrca obo:CDAO_0000179 ?mrca_ancestor option(transitive) }
     }
 }
 GROUP BY ?mrca
-ORDER BY desc(?mrca_ancestors)
+ORDER BY desc(?steps)
+LIMIT 1
 ''' % (graph, taxon, mrca)
         cursor.execute(query)
         results = cursor
