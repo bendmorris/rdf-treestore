@@ -21,7 +21,6 @@ WHERE {
            obo:CDAO_0000187 [ rdf:label "%s" ] .
         ?t2 obo:CDAO_0000179 ?mrca option(transitive) ;
            obo:CDAO_0000187 [ rdf:label "%s" ] .
-        OPTIONAL { ?mrca obo:CDAO_0000179 ?mrca_ancestor option(transitive) }
     }
 }
 GROUP BY ?mrca
