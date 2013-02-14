@@ -218,8 +218,8 @@ ORDER BY ?label
                                    ]
                         }
             return repr(json_dict)
-        elif format =='csv':
-            return ','.join([str(result[1]) for result in results])
+        elif format == 'csv':
+            return ','.join(sorted(list(set([str(result[1]) for result in results]))))
         else: 
             return results
 
