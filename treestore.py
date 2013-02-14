@@ -168,7 +168,7 @@ ORDER BY DESC(?matches)
         results = cursor
         
         for result in results:
-            if (not match_all) or int(str(result['matches']))==len(contains):
+            if (not match_all) or int(str(result[1]))==len(contains):
                 yield str(result[0]) + (' (%s)' % result[1] 
                                          if (contains 
                                          and not match_all 
