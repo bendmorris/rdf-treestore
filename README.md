@@ -5,26 +5,19 @@ This is an implementation of a phylogenetic tree store with an RDF backend.
 
 ### BioPython
 
-treestore requires the librdf Python bindings (http://librdf.org/docs/python.html)
-and the author's fork of BioPython. You can install this fork using the following 
-commands:
+The output format CDAO is now supported by BioPython (http://www.biopython.org).
+This feature was introduced after the release of BioPython 1.6.1, so until the
+next release, you'll need to install the active development version.
 
-    git clone https://github.com/bendmorris/biopython.git
+    git clone https://github.com/biopython/biopython.git
     cd biopython
-    git checkout cdao
     sudo python setup.py install
 
-### DendroPy
 
-BioPython currently has issues with Nexus file parsing. Until this can be resolved,
-we are circumventing the issue by using DendroPy, so you'll need to install that 
-as well:
+### Redland (librdf)
 
-    sudo pip install dendropy
+treestore requires the librdf Python bindings (http://librdf.org/docs/python.html)
 
-or
-
-    sudo easy_install -U dendropy
 
 ### Virtuoso ODBC connection
 
