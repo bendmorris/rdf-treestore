@@ -12,19 +12,19 @@ def mrca(taxa, treestore, graph):
     mrca = None
     
     for taxon in taxa:
-        try: node_info = get_node_info(graph, cursor, taxon)
+        try: ancestors = get_ancestors(graph, cursor, taxon)
         except:
             taxa.remove(taxon)
             continue
 
         if not mrca:
             mrca_ancestors = []
-            for (ancestor,) in node_info:
+            for (ancestor,) in ancestors:
                 mrca_ancestors.append(ancestor)
             mrca = mrca_ancestors[0]
             continue
             
-        for (ancestor,) in node_info:
+        for (ancestor,) in ancestors:
             if ancestor in mrca_ancestors:
                 mrca = ancestor
                 mrca_ancestors = mrca_ancestors[mrca_ancestors.index(ancestor):]
@@ -105,7 +105,7 @@ def pruned_tree(tree, contains):
     return tree
 
 
-def get_node_info(graph, cursor, taxon):
+def get_ancestors(graph, cursor, taxon):
     query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
