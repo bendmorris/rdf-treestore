@@ -12,47 +12,24 @@ def mrca(taxa, treestore, graph):
     mrca = None
     
     for taxon in taxa:
-        try: node_id = get_node_id(graph, cursor, taxon)
+        try: node_info = get_node_info(graph, cursor, taxon)
         except:
             taxa.remove(taxon)
             continue
 
         if not mrca:
-            mrca = node_id
+            mrca_ancestors = []
+            for (ancestor,) in node_info:
+                mrca_ancestors.append(ancestor)
+            mrca = mrca_ancestors[0]
             continue
-
-        if same_lineage(graph, cursor, node_id, mrca): continue
-        if same_lineage(graph, cursor, mrca, node_id):
-            mrca = node_id
-            continue
-
-        query = '''sparql
-PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-
-SELECT ?mrca ?steps
-WHERE {
-    GRAPH <%s> {
-        ?t1 obo:CDAO_0000179 ?mrca option(transitive, t_step('step_no') as ?steps) .
-        ?t2 obo:CDAO_0000179 ?mrca2 option(transitive) .
-
-        FILTER ( ?t1 = <%s> )
-        FILTER ( ?t2 = <%s> )
-        FILTER ( ?mrca = ?mrca2 )
-    }
-}
-ORDER BY ?steps
-''' % (graph, node_id, mrca)
-
-        cursor.execute(query)
-        results = cursor
+            
+        for (ancestor,) in node_info:
+            if ancestor in mrca_ancestors:
+                mrca = ancestor
+                mrca_ancestors = mrca_ancestors[mrca_ancestors.index(ancestor):]
+                break
         
-        try:
-            new_mrca = str(results.next()[0])
-            if new_mrca: mrca = new_mrca
-        except StopIteration:
-            raise Exception('MRCA of (%s, %s) not found.' % (mrca, taxon))
-    
     return mrca
     
     
@@ -73,7 +50,7 @@ WHERE {
         OPTIONAL { ?n obo:CDAO_0000179 ?parent . }
     }
 }''' % (graph, ('''?n obo:CDAO_0000179 <%s> 
-option(transitive, t_min 0) .''' % mrca) if mrca 
+option(transitive, t_min(0)) .''' % mrca) if mrca 
 else 
 '')
     cursor.execute(query)
@@ -107,7 +84,6 @@ else
     return tree
 
 
-
 def pruned_tree(tree, contains):
     def prune_clade(tree, clade, root=False):
         keep_pruning = True
@@ -118,60 +94,34 @@ def pruned_tree(tree, contains):
                     keep_pruning = True
                     break
         
-        if not root and not (clade.name in contains):
+        if not root and not (clade.name in contains) and len(clade.clades) <= 1:
             tree.collapse(clade)
             return True
         else:
             return False
-
+    
     prune_clade(tree, tree.root, True)
     
     return tree
 
 
-
-def same_lineage(graph, cursor, taxon, mrca):
-    '''Returns True if the taxon is a descendent of the MRCA.'''
-
-    if taxon == mrca: return True
-
-    query = '''sparql
-PREFIX obo: <http://purl.obolibrary.org/obo/>
-
-ASK {
-    GRAPH <%s> {
-        <%s> obo:CDAO_0000179 <%s> option(transitive, t_min(0)) .
-    }
-}
-''' % (graph, taxon, mrca)
-    
-    cursor.execute(query)
-    try:
-        if cursor.next()[0]: return True
-    except StopIteration: pass
-
-    return False
-
-
-def get_node_id(graph, cursor, taxon):
+def get_node_info(graph, cursor, taxon):
     query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-SELECT ?t
+SELECT DISTINCT ?ancestor
 WHERE {
     GRAPH <%s> {
         ?t obo:CDAO_0000187 [ rdf:label "%s" ] .
+        OPTIONAL { ?t obo:CDAO_0000179 ?ancestor 
+                   option(transitive, t_direction 1, t_step('step_no') as ?steps, 
+                          t_min 0, t_max 10000) }
     }
 }
-GROUP BY ?mrca
 ORDER BY ?steps
-LIMIT 1
 ''' % (graph, taxon)
     cursor.execute(query)
     results = cursor
     
-    try:
-        return str(results.next()[0])
-    except StopIteration:
-        raise Exception('%s not found.' % (taxon))
+    return results
