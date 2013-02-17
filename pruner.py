@@ -55,9 +55,8 @@ else
 '')
     cursor.execute(query)
     
-    root = bp.CDAO.Clade()
+    root = None
     nodes = {}
-    nodes[mrca] = root
     stmts = cursor
     
     for i in range(2):
@@ -69,10 +68,11 @@ else
                 clade = bp.CDAO.Clade(name=label, branch_length=float(edge_length) if edge_length else None)
                 nodes[node_id] = clade
             
-            if parent and (parent in nodes):
+            if root is None and node_id == mrca:
+                root = nodes[node_id]
+            elif parent and (parent in nodes):
                 nodes[parent].clades.append(clade)
             else:
-                root = nodes[node_id]
                 redo.append(stmt)
                 
         stmts = redo
