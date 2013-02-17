@@ -3,6 +3,7 @@ import RDF
 import os
 import re
 import sha
+import shutil
 import sys
 import pyodbc
 import pruner
@@ -60,8 +61,11 @@ class Treestore:
                 print 'Woops. \'pyodbc\' is not available on this platform.'
                 return
 
-            bp.convert(tree_file, format, os.path.join(treestore_dir, 'temp.cdao'), 'cdao', 
-                       tree_uri=tree_uri, rooted=rooted)
+            if format == 'cdao':
+                shutil.copy(tree_file, os.path.join(treestore_dir, 'temp.cdao'))
+            else:
+                bp.convert(tree_file, format, os.path.join(treestore_dir, 'temp.cdao'), 'cdao', 
+                           tree_uri=tree_uri, rooted=rooted)
         
             cursor = self.odbc_connection.cursor()
         
