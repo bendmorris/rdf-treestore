@@ -39,7 +39,7 @@ class Treestore:
             pass
 
 
-    def add_trees(self, tree_file, format, tree_uri=None, bulk_loader=None, puid=False):
+    def add_trees(self, tree_file, format, tree_uri=None, bulk_loader=None, puid=False, rooted=False):
         '''Convert trees residing in a text file into RDF, and add them to the
         underlying RDF store with a context node for retrieval.
 
@@ -61,7 +61,7 @@ class Treestore:
                 return
 
             bp.convert(tree_file, format, os.path.join(treestore_dir, 'temp.cdao'), 'cdao', 
-                       tree_uri=tree_uri)
+                       tree_uri=tree_uri, rooted=rooted)
         
             cursor = self.odbc_connection.cursor()
         
@@ -80,8 +80,8 @@ class Treestore:
             cursor.execute('DELETE FROM DB.DBA.load_list')
         
         else:
-            bp.convert(tree_file, format, None, 'cdao', 
-                       storage=self.store, tree_uri=tree_uri, context=tree_uri)
+            bp.convert(tree_file, format, RDF.Model(self.store), 'cdao', 
+                       tree_uri=tree_uri, context=tree_uri, rooted=rooted)
         
         
     def get_trees(self, tree_uri):
@@ -261,6 +261,7 @@ def main():
     add_parser.add_argument('uri', help='tree uri (default=file name)', nargs='?', default=None)
     add_parser.add_argument('--bulk', help='use the virtuoso bulk loader', action='store_true')
     add_parser.add_argument('--puid', help='create a pseudo-unique ID for the tree', action='store_true')
+    add_parser.add_argument('--rooted', help='this is a rooted tree', action='store_true')
 
     get_parser = subparsers.add_parser('get', help='retrieve trees from treestore')
     get_parser.add_argument('uri', help='tree uri')
@@ -317,7 +318,8 @@ def main():
 
     if args.command == 'add':
         # parse a tree and add it to the treestore
-        treestore.add_trees(args.file, args.format, args.uri, bulk_loader=args.bulk, puid=args.puid)
+        treestore.add_trees(args.file, args.format, args.uri, bulk_loader=args.bulk, puid=args.puid,
+                            rooted=args.rooted)
         
     elif args.command == 'get':
         # get a tree, serialize in specified format, and output to stdout
