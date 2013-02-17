@@ -224,13 +224,15 @@ ORDER BY ?label
             return results
 
 
-    def get_subtree(self, contains=[], contains_ids=[], match_all=False, format='newick', prune=True):
+    def get_subtree(self, contains=[], contains_ids=[], tree_uri=None,
+                    match_all=False, format='newick', prune=True):
         if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
-        trees = self.list_trees(contains=contains, match_all=match_all)
-        try:
-            tree_uri = trees.next()
-        except StopIteration:
-            raise Exception("An appropriate tree for this query couldn't be found.")
+        if not tree_uri:
+            trees = self.list_trees(contains=contains, match_all=match_all)
+            try:
+                tree_uri = trees.next()
+            except StopIteration:
+                raise Exception("An appropriate tree for this query couldn't be found.")
         
         mrca = pruner.mrca(list(contains), self, tree_uri)
         tree = pruner.subtree(mrca, self, tree_uri, prune=contains if prune else False)
@@ -280,14 +282,14 @@ def main():
 
     names_parser = subparsers.add_parser('names', 
                                          help='return a comma-separated list of all taxa names')
-    names_parser.add_argument('tree', help='name of tree (default=all trees)', 
+    names_parser.add_argument('uri', help='tree uri (default=all trees)', 
                               nargs='?', default=None)
     names_parser.add_argument('-f', '--format', help='file format (json, csv, xml) (default=csv)', 
                               default='csv')
 
     count_parser = subparsers.add_parser('count', 
                                          help='returns the number of labelled nodes in a tree')
-    count_parser.add_argument('tree', help='name of tree (default=all trees)', 
+    count_parser.add_argument('uri', help='tree uri (default=all trees)', 
                               nargs='?', default=None)
 
     query_parser = subparsers.add_parser('query', 
@@ -297,6 +299,8 @@ def main():
         nargs='?')
     query_parser.add_argument('format', help='serialization format (%s) (default=newick)' % output_formats, 
                               nargs='?', default='newick')
+    query_parser.add_argument('uri', help='tree uri (default=select automatically)', 
+                              nargs='?', default=None)
     query_parser.add_argument('--all', help='only return trees that contain all given species', 
                               action='store_true')
     query_parser.add_argument('--complete', help="return complete subtree from MRCA; don't prune other taxa from the resulting tree",
@@ -377,14 +381,15 @@ def main():
 
 
     elif args.command == 'names':
-        print treestore.get_names(tree_uri=args.tree, format=args.format)
+        print treestore.get_names(tree_uri=args.uri, format=args.format)
 
     elif args.command == 'count':
-        print len([r for r in treestore.get_names(tree_uri=args.tree, format=None)])
+        print len([r for r in treestore.get_names(tree_uri=args.uri, format=None)])
 
     elif args.command == 'query':
         contains = set([s.strip() for s in args.contains.split(',')])
-        print treestore.get_subtree(contains=contains, match_all=args.all, format=args.format, prune=not args.complete),
+        print treestore.get_subtree(contains=contains, tree_uri=args.uri,
+                                    match_all=args.all, format=args.format, prune=not args.complete),
 
     elif args.command == 'annotate':
         annotate(args.uri, args.file, treestore, format=args.format)
