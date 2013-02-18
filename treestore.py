@@ -244,6 +244,12 @@ ORDER BY ?label
         return self.serialize_trees(trees=[tree], format=format)
 
 
+    def sparql_query(self, query):
+        if not query.startswith('sparql'): query = 'sparql\n' + query
+        cursor = self.odbc_connection.cursor()
+        cursor.execute(query)
+        return cursor
+
 
 def main():
     import argparse
