@@ -1,5 +1,3 @@
-import RDF
-import Redland_python
 import Bio.Phylo as bp
 
 
