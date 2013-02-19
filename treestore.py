@@ -242,7 +242,11 @@ ORDER BY ?label
 
 
     def get_subtree(self, contains=[], contains_ids=[], tree_uri=None,
-                    match_all=False, format='newick', prune=True):
+                    match_all=False, format='newick', prune=True, filter=None):
+
+        # TODO: filter is not being used. Use cql.py to parse the query, then convert the
+        # requirements into SPARQL.
+
         if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
         if not tree_uri:
             trees = self.list_trees_containing_taxa(contains=contains, match_all=match_all, show_counts=False)
