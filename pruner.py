@@ -18,6 +18,9 @@ def mrca(taxa, treestore, graph):
             mrca_ancestors = []
             for (ancestor,) in ancestors:
                 mrca_ancestors.append(ancestor)
+            if not mrca_ancestors:
+                taxa.remove(taxon)
+                continue
             mrca = mrca_ancestors[0]
             continue
             
@@ -27,6 +30,7 @@ def mrca(taxa, treestore, graph):
                 mrca_ancestors = mrca_ancestors[mrca_ancestors.index(ancestor):]
                 break
         
+    if not mrca: raise Exception('MRCA could not be found; none of these taxa are members of this tree.')
     return mrca
     
     
