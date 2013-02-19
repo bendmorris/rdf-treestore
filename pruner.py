@@ -4,8 +4,7 @@ import Bio.Phylo as bp
 def mrca(taxa, treestore, graph):
     assert len(taxa) > 0
     
-    connection = treestore.odbc_connection
-    cursor = connection.cursor()
+    cursor = treestore.get_cursor()
     
     mrca = None
     
@@ -32,8 +31,7 @@ def mrca(taxa, treestore, graph):
     
     
 def subtree(mrca, treestore, graph, prune=False):
-    connection = treestore.odbc_connection
-    cursor = connection.cursor()
+    cursor = treestore.get_cursor()
     
     query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>

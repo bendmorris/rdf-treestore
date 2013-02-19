@@ -1,11 +1,13 @@
 import Bio.Phylo as bp
-import RDF
+try:
+    import RDF
+except NameError: pass
 import os
 import re
 import sha
 import shutil
 import sys
-import pyodbc
+import pypyodbc as pyodbc
 import pruner
 import annotate
 from cStringIO import StringIO
@@ -20,30 +22,32 @@ class Treestore:
         '''Create a treestore object from an ODBC connection with given DSN,
         username and password.'''
 
-        try:
-            if storage:
-                self.store = storage
-            else:
-                self.store = RDF.Storage(storage_name=storage_name, name='db',
-                                         options_string="dsn='%s',user='%s',password='%s'" 
-                                         % (dsn, user, password)
-                                         )
-        except:
-            # if Redland's Virtuoso storage fails, don't create this store now
-            pass
+        self.dsn = dsn
+        self.user = user
+        self.password = password
 
-        try:
-            self.odbc_connection = pyodbc.connect('DSN=%s;UID=%s;PWD=%s' % (dsn, user, password),
-                                                  autocommit=True)
-        except NameError:
-            # Handled later.
-            pass
 
+    def get_connection(self):
+        return pyodbc.connect('DSN=%s;UID=%s;PWD=%s' % (self.dsn, self.user, self.password),
+                              autocommit=True)
+
+    def get_rdf_store(self):
+        return RDF.Storage(storage_name='virtuoso', name='db',
+                           options_string="dsn='%s',user='%s',password='%s'" 
+                           % (self.dsn, self.user, self.password)
+                           )
+
+    odbc_connection = property(get_connection)
+    rdf_store = property(get_rdf_store)
+
+    def get_cursor(self):
+        connection = self.odbc_connection
+        return connection.cursor()
 
     def add_trees(self, tree_file, format, tree_uri=None, bulk_loader=None, puid=False, rooted=False):
         '''Convert trees residing in a text file into RDF, and add them to the
         underlying RDF store with a context node for retrieval.
-
+        
         Example:
         >>> treestore.add_trees('test.newick', 'newick', 'http://www.example.org/test/')
         '''
@@ -67,7 +71,7 @@ class Treestore:
                 bp.convert(tree_file, format, os.path.join(treestore_dir, 'temp.cdao'), 'cdao', 
                            tree_uri=tree_uri, rooted=rooted)
         
-            cursor = self.odbc_connection.cursor()
+            cursor = self.get_cursor()
         
             update_stmt = 'sparql load <file://%s> into <%s>' % (
                 os.path.abspath(os.path.join(treestore_dir, 'temp.cdao')), tree_uri)
@@ -84,23 +88,22 @@ class Treestore:
             cursor.execute('DELETE FROM DB.DBA.load_list')
         
         else:
-            bp.convert(tree_file, format, RDF.Model(self.store), 'cdao', 
+            bp.convert(tree_file, format, RDF.Model(self.rdf_store), 'cdao', 
                        tree_uri=tree_uri, context=tree_uri, rooted=rooted)
         
         
     def get_trees(self, tree_uri):
         '''Retrieve trees that were previously added to the underlying RDF 
         store. Returns a generator of Biopython trees.
-
+        
         Example:
         >>> trees = treestore.get_trees('http://www.example.org/test/')
         >>> trees.next()
         Tree(weight=1.0, rooted=False)
         '''
         
-        #return pruner.subtree(None, self, tree_uri).next()
         parser = bp.CDAOIO.Parser()
-        return parser.parse_model(RDF.Model(self.store), context=tree_uri)
+        return parser.parse_model(RDF.Model(self.rdf_store), context=tree_uri)
         
 
     def serialize_trees(self, tree_uri='', format='newick', trees=None):
@@ -137,47 +140,58 @@ class Treestore:
         >>> treestore.remove_trees('http://www.example.org/test/')
         '''
 
-        cursor = self.odbc_connection.cursor()
+        cursor = self.get_cursor()
         cursor.execute('sparql clear graph <%s>' % tree_uri)
 
 
-    def list_trees(self, contains=[], match_all=False, show_match_counts=False):
-        '''List all trees in the treestore. Use `contains` to find trees that
-        contain one or more specified taxa; `match_all` to find only trees that
-        contain all of the listed taxa.
-
-        Example:
-        >>> treestore.remove_trees('http://www.example.org/test/')
+    def list_trees(self):
+        '''List all trees in the treestore.
         '''
-        # TODO: use the smaller tree in the event of a match tie for efficiency?
 
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-SELECT ?graph (count(?match) as ?matches)
+SELECT DISTINCT ?graph
 WHERE {
     GRAPH ?graph {
-        [] obo:CDAO_0000148 [] .
+        [] obo:CDAO_0000148 [] . 
+    }
+}
+ORDER BY ?graph
+'''
+        cursor = self.get_cursor()
+        cursor.execute(query)
+        
+        return [str(result[0]) for result in cursor]
+
+
+    def list_trees_containing_taxa(self, contains=[], match_all=False):
+        '''List all trees that contain the specified taxa. If match_all is 
+        True, only return trees that match the entire list.'''
+
+        if not contains: return self.list_trees()
+
+        query = '''sparql
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT DISTINCT ?graph (count(DISTINCT ?label) as ?matches)
+WHERE {
+    GRAPH ?graph {
+        ?tree obo:CDAO_0000148 [] .
         %s
     }
 } 
-GROUP BY ?graph
+GROUP BY ?graph ?tree
 ORDER BY DESC(?matches)
-''' % (' UNION\n        '.join(['{ ?match rdf:label "%s" }' % contain for contain in contains]))
-        
-        #print query
-        cursor = self.odbc_connection.cursor()
+''' % (' UNION\n        '.join(['{ [] rdf:label ?label. FILTER(?label = "%s") }' % contain for contain in 
+contains]))
+        cursor = self.get_cursor()
         cursor.execute(query)
-        results = cursor
         
-        for result in results:
-            if (not match_all) or int(str(result[1]))==len(contains):
-                yield str(result[0]) + (' (%s)' % result[1] 
-                                         if (contains 
-                                         and not match_all 
-                                         and show_match_counts) 
-                                         else '') 
+        return ['%s (%s)' % (result[0], result[1]) for result in cursor
+                if (not match_all) or (int(result[1]) == len(contains))]
 
 
     def get_names(self, tree_uri=None, format=None):
@@ -195,8 +209,7 @@ WHERE {
 ORDER BY ?label
 ''' % (('<%s>' % tree_uri) if tree_uri else '?graph')
         
-        #print query
-        cursor = self.odbc_connection.cursor()
+        cursor = self.get_cursor()
         cursor.execute(query)
 
         results = cursor
@@ -225,7 +238,7 @@ ORDER BY ?label
         elif format == 'csv':
             return ','.join(sorted(list(set([str(result[1]) for result in results]))))
         else: 
-            return results
+            return [str(result[1]) for result in results]
 
 
     def get_subtree(self, contains=[], contains_ids=[], tree_uri=None,
@@ -246,9 +259,31 @@ ORDER BY ?label
 
     def sparql_query(self, query):
         if not query.startswith('sparql'): query = 'sparql\n' + query
-        cursor = self.odbc_connection.cursor()
+        cursor = self.get_cursor()
         cursor.execute(query)
         return cursor
+
+
+    def get_tree_info(self, tree_uri=None):
+        query = '''sparql
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+
+SELECT ?graph ?tree (count(?otu) as ?taxa)
+WHERE {
+    GRAPH ?graph {
+        ?tree obo:CDAO_0000148 [] .
+        ?otu obo:CDAO_0000187 [] .
+    }
+    %s
+} 
+GROUP BY ?graph ?tree
+ORDER BY ?graph
+''' % ('' if tree_uri is None else ('FILTER(?graph = <%s>)' % tree_uri))
+        cursor = self.get_cursor()
+        cursor.execute(query)
+
+        return [{k:v for k, v in zip(('uri', 'tree', 'taxa'), result) } for result in cursor]
 
 
 def main():
@@ -344,12 +379,15 @@ def main():
         treestore.remove_trees(args.uri)
         
     elif args.command == 'ls':
-        # list all trees in the treestore
+        # list all trees in the treestore or trees containing a list of taxa
         contains = args.contains
-        if contains: contains = set([s.strip() for s in contains.split(',')])
-        trees = [r for r in treestore.list_trees(contains=contains, match_all=args.all, 
-                                                 show_match_counts=True)]
-        if not contains: trees = sorted(trees)
+        if contains: 
+            contains = set([s.strip() for s in contains.split(',')])
+            trees = [r for r in treestore.list_trees_containing_taxa(
+                        contains=contains, match_all=args.all)]
+        else:
+            trees = treestore.list_trees()
+
         if not trees: exit()
         
         if sys.stdout.isatty():
