@@ -124,7 +124,7 @@ class Treestore:
         if format == 'cdao':
             bp.write(trees, s, format, tree_uri=tree_uri)
         elif format == 'ascii':
-            bp._utils.draw_ascii((i for i in trees).next())
+            bp._utils.draw_ascii((i for i in trees).next(), file=s)
         else:
             bp.write(trees, s, format)
 
@@ -166,11 +166,9 @@ ORDER BY ?graph
         return [str(result[0]) for result in cursor]
 
 
-    def list_trees_containing_taxa(self, contains=[], match_all=False):
+    def list_trees_containing_taxa(self, contains=[], match_all=False, show_counts=True):
         '''List all trees that contain the specified taxa. If match_all is 
         True, only return trees that match the entire list.'''
-
-        if not contains: return self.list_trees()
 
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
@@ -190,8 +188,10 @@ contains]))
         cursor = self.get_cursor()
         cursor.execute(query)
         
-        return ['%s (%s)' % (result[0], result[1]) for result in cursor
-                if (not match_all) or (int(result[1]) == len(contains))]
+        for result in cursor:
+            if (not match_all) or (int(result[1]) == len(contains)):
+                if show_counts: yield '%s (%s)' % (result[0], result[1])
+                else: yield str(result[0])
 
 
     def get_names(self, tree_uri=None, format=None):
@@ -245,7 +245,8 @@ ORDER BY ?label
                     match_all=False, format='newick', prune=True):
         if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
         if not tree_uri:
-            trees = self.list_trees(contains=contains, match_all=match_all)
+            trees = self.list_trees_containing_taxa(contains=contains, match_all=match_all, show_counts=False)
+
             try:
                 tree_uri = trees.next()
             except StopIteration:
