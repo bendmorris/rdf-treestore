@@ -177,7 +177,7 @@ SELECT DISTINCT ?graph (count(DISTINCT ?label) as ?matches)
 WHERE {
     GRAPH ?graph {
         ?tree obo:CDAO_0000148 [] .
-        { ?match rdfs:label ?label . FILTER (?label in %s)
+        { ?match rdfs:label ?label . FILTER (?label in (%s)) }
     }
 } 
 GROUP BY ?graph ?tree
