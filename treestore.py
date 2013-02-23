@@ -150,7 +150,6 @@ class Treestore:
 
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
 SELECT DISTINCT ?graph
 WHERE {
@@ -172,19 +171,18 @@ ORDER BY ?graph
 
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
 SELECT DISTINCT ?graph (count(DISTINCT ?label) as ?matches)
 WHERE {
     GRAPH ?graph {
         ?tree obo:CDAO_0000148 [] .
-        %s
+        { ?match rdfs:label ?label . FILTER (?label in %s)
     }
 } 
 GROUP BY ?graph ?tree
 ORDER BY DESC(?matches)
-''' % (' UNION\n        '.join(['{ [] rdf:label ?label. FILTER(?label = "%s") }' % contain for contain in 
-contains]))
+''' % (', '.join(['"%s"' % contain for contain in contains]))
         cursor = self.get_cursor()
         cursor.execute(query)
         
@@ -197,13 +195,13 @@ contains]))
     def get_names(self, tree_uri=None, format=None):
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
 SELECT DISTINCT ?uri, ?label
 WHERE {
     GRAPH %s {
         [] obo:CDAO_0000148 [] .
-        ?uri rdf:label ?label .
+        ?uri rdfs:label ?label .
     }
 }
 ORDER BY ?label
@@ -272,7 +270,6 @@ ORDER BY ?label
     def get_tree_info(self, tree_uri=None):
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
 SELECT ?graph ?tree (count(?otu) as ?taxa)
 WHERE {

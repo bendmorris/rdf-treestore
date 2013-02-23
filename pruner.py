@@ -39,13 +39,13 @@ def subtree(mrca, treestore, graph, prune=False):
     
     query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
 SELECT DISTINCT ?n ?length ?parent ?label
 WHERE {
     GRAPH <%s> {
         %s
-        OPTIONAL { ?n obo:CDAO_0000187 [ rdf:label ?label ] . }
+        OPTIONAL { ?n obo:CDAO_0000187 [ rdfs:label ?label ] . }
         OPTIONAL { ?n obo:CDAO_0000143 [ obo:CDAO_0000193 [ obo:CDAO_0000215 ?length ] ] . }
         OPTIONAL { ?n obo:CDAO_0000179 ?parent . }
     }
@@ -108,12 +108,12 @@ def pruned_tree(tree, contains):
 def get_ancestors(graph, cursor, taxon):
     query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
 SELECT DISTINCT ?ancestor
 WHERE {
     GRAPH <%s> {
-        ?t obo:CDAO_0000187 [ rdf:label "%s" ] .
+        ?t obo:CDAO_0000187 [ rdfs:label "%s" ] .
         OPTIONAL { ?t obo:CDAO_0000179 ?ancestor 
                    option(transitive, t_direction 1, t_step('step_no') as ?steps, 
                           t_min 0, t_max 10000) }
