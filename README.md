@@ -47,7 +47,7 @@ Try it out:
     >>> trees = t.get_trees('http://www.example.org/test/')
     >>> trees.next()
     Tree(weight=1.0, rooted=False)
-    >>> print t.serialize_trees('test', 'nexml')
+    >>> print t.serialize_trees('http://www.example.org/test/', 'nexml')
     ...
 
 ### Command line tool
