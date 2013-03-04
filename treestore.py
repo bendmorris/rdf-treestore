@@ -10,6 +10,7 @@ import sys
 import pypyodbc as pyodbc
 import pruner
 import annotate
+import lscolumns
 from cStringIO import StringIO
 
 
@@ -61,10 +62,6 @@ class Treestore:
                 tree_uri = 'http://phylotastic.org/hack2/%s/%s' % (puid, tree_uri)
 
         if bulk_loader:
-            if self.odbc_connection == None:
-                print 'Woops. \'pyodbc\' is not available on this platform.'
-                return
-
             if format == 'cdao':
                 shutil.copy(tree_file, os.path.join(treestore_dir, 'temp.cdao'))
             else:
@@ -392,42 +389,7 @@ def main():
 
         if not trees: exit()
         
-        if sys.stdout.isatty():
-            # if output to terminal, use column output
-            
-            #width, height = console.getTerminalSize()
-            from term_size import get_terminal_size
-            cols,lines = get_terminal_size()
-            max_width = cols
-            
-            def tree_columns(trees, cols):
-                columns = []
-                col_size = len(trees) / cols
-                extra = len(trees) % cols
-                n = 0
-                for i in range(cols):
-                    s = col_size
-                    if i+1 <= extra: s += 1         
-                    this_column = trees[n:n+s]
-                    columns.append(this_column)
-                    n += s
-                return columns
-                
-            for cols in [int(len(trees) / float(i) + 0.5) for i in range(1, len(trees) + 1)]:
-                columns = tree_columns(trees, cols)
-                widths = [max([len(c) for c in column])+2 for column in columns]
-                if sum(widths) < max_width:
-                    break
-                
-            for pos in range(len(columns[0])):
-                for column, width in zip(columns, widths):
-                    if len(column) > pos:
-                        print column[pos].ljust(width-1),
-                print
-                
-        else:
-            # otherwise, just output each tree, one per line
-            for tree in trees: print tree
+        lscolumns.printls(trees)
 
 
     elif args.command == 'names':
