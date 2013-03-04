@@ -10,7 +10,6 @@ import sys
 import pypyodbc as pyodbc
 import pruner
 import annotate
-import lscolumns
 from cStringIO import StringIO
 
 
@@ -389,6 +388,7 @@ def main():
 
         if not trees: exit()
         
+        import lscolumns
         lscolumns.printls(trees)
 
 
