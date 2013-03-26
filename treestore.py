@@ -14,7 +14,8 @@ from cStringIO import StringIO
 
 
 __version__ = '0.1.2'
-treestore_dir = '/home/ben/Dev/treestore/'
+treestore_dir = os.path.expanduser('~/treestore/')
+if not os.path.exists(treestore_dir): os.mkdir(treestore_dir)
 
 class Treestore:
     def __init__(self, storage_name='virtuoso', dsn='Virtuoso', 
