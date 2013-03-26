@@ -63,7 +63,9 @@ class Treestore:
 
         if bulk_loader:
             if format == 'cdao':
-                shutil.copy(tree_file, os.path.join(treestore_dir, 'temp.cdao'))
+                f1, f2 = tree_file, os.path.join(treestore_dir, 'temp.cdao')
+                if not os.path.abspath(f1) == os.path.abspath(f2):
+                    shutil.copy(f1, f2)
             else:
                 bp.convert(tree_file, format, os.path.join(treestore_dir, 'temp.cdao'), 'cdao', 
                            tree_uri=tree_uri, rooted=rooted)
