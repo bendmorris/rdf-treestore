@@ -26,13 +26,28 @@ Help on setting this up for Virtuoso is here:
 
 http://docs.openlinksw.com/virtuoso/odbcimplementation.html
 
-And then, install pyodbc:
+You'll need the Virtuoso ODBC library (Ubuntu package 'libvirtodbc0')
+and unixodbc-dev installed. Create two config files, one in /etc/odbcinst.ini:
 
-    sudo pip install pyodbc
+    [virtuoso-odbc]
+    Driver = /usr/lib/odbc/virtodbc.so
+
+and one in /etc/odbc.ini:
+
+    [Virtuoso]
+    Driver = virtuoso-odbc
+    Description = Virtuoso Open-Source Edition
+    Address = localhost:1111
+
+
+Next, install pypyodbc:
+
+    sudo pip install ppyyodbc
 
 or
 
-    sudo easy_install pyodbc
+    sudo easy_install pypyodbc
+
 
 Examples
 --------
