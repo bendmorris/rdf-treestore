@@ -39,6 +39,10 @@ and one in /etc/odbc.ini:
     Description = Virtuoso Open-Source Edition
     Address = localhost:1111
 
+To allow the Virtuoso bulk loader to run, create a directory to store temporary
+RDF files (default is in ~/treestore) and add that path to the DirsAllowed
+setting in virtuoso.ini.
+
 
 Next, install pypyodbc:
 
