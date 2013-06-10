@@ -1,7 +1,4 @@
 import Bio.Phylo as bp
-try:
-    import RDF
-except NameError: pass
 import os
 import re
 import sha
@@ -32,20 +29,13 @@ class Treestore:
         return pyodbc.connect('DSN=%s;UID=%s;PWD=%s' % (self.dsn, self.user, self.password),
                               autocommit=True)
 
-    def get_rdf_store(self):
-        return RDF.Storage(storage_name='virtuoso', name='db',
-                           options_string="dsn='%s',user='%s',password='%s'" 
-                           % (self.dsn, self.user, self.password)
-                           )
-
     odbc_connection = property(get_connection)
-    rdf_store = property(get_rdf_store)
 
     def get_cursor(self):
         connection = self.odbc_connection
         return connection.cursor()
 
-    def add_trees(self, tree_file, format, tree_uri=None, bulk_loader=None, puid=False, rooted=False):
+    def add_trees(self, tree_file, format, tree_uri=None, puid=False, rooted=False):
         '''Convert trees residing in a text file into RDF, and add them to the
         underlying RDF store with a context node for retrieval.
         
@@ -61,34 +51,29 @@ class Treestore:
                 puid = sha.new(open(tree_file).read()).hexdigest()
                 tree_uri = 'http://phylotastic.org/hack2/%s/%s' % (puid, tree_uri)
 
-        if bulk_loader:
-            if format == 'cdao':
-                f1, f2 = tree_file, os.path.join(treestore_dir, 'temp.cdao')
-                if not os.path.abspath(f1) == os.path.abspath(f2):
-                    shutil.copy(f1, f2)
-            else:
-                bp.convert(tree_file, format, os.path.join(treestore_dir, 'temp.cdao'), 'cdao', 
-                           tree_uri=tree_uri, rooted=rooted)
-        
-            cursor = self.get_cursor()
-        
-            update_stmt = 'sparql load <file://%s> into <%s>' % (
-                os.path.abspath(os.path.join(treestore_dir, 'temp.cdao')), tree_uri)
-        
-            load_stmt = "ld_dir ('%s', 'temp.cdao', '%s')" % (
-                os.path.abspath(treestore_dir), tree_uri)
-            print load_stmt
-            cursor.execute(load_stmt)
-        
-            update_stmt = "rdf_loader_run()"
-            print update_stmt
-            cursor.execute(update_stmt)
-
-            cursor.execute('DELETE FROM DB.DBA.load_list')
-        
+        if format == 'cdao':
+            f1, f2 = tree_file, os.path.join(treestore_dir, 'temp.cdao')
+            if not os.path.abspath(f1) == os.path.abspath(f2):
+                shutil.copy(f1, f2)
         else:
-            bp.convert(tree_file, format, RDF.Model(self.rdf_store), 'cdao', 
-                       tree_uri=tree_uri, context=tree_uri, rooted=rooted)
+            bp.convert(tree_file, format, os.path.join(treestore_dir, 'temp.cdao'), 'cdao', 
+                       tree_uri=tree_uri, rooted=rooted)
+    
+        cursor = self.get_cursor()
+    
+        update_stmt = 'sparql load <file://%s> into <%s>' % (
+            os.path.abspath(os.path.join(treestore_dir, 'temp.cdao')), tree_uri)
+    
+        load_stmt = "ld_dir ('%s', 'temp.cdao', '%s')" % (
+            os.path.abspath(treestore_dir), tree_uri)
+        print load_stmt
+        cursor.execute(load_stmt)
+    
+        update_stmt = "rdf_loader_run()"
+        print update_stmt
+        cursor.execute(update_stmt)
+
+        cursor.execute('DELETE FROM DB.DBA.load_list')
         
         
     def get_trees(self, tree_uri):
@@ -101,8 +86,6 @@ class Treestore:
         Tree(weight=1.0, rooted=False)
         '''
         
-        #parser = bp.CDAOIO.Parser()
-        #return parser.parse_model(RDF.Model(self.rdf_store), context=tree_uri)
         return [pruner.subtree(None, self, tree_uri)]
 
     def serialize_trees(self, tree_uri='', format='newick', trees=None):
@@ -307,7 +290,6 @@ def main():
     add_parser.add_argument('file', help='tree file')
     add_parser.add_argument('format', help='file format (%s)' % input_formats)
     add_parser.add_argument('uri', help='tree uri (default=file name)', nargs='?', default=None)
-    add_parser.add_argument('--bulk', help='use the virtuoso bulk loader', action='store_true')
     add_parser.add_argument('--puid', help='create a pseudo-unique ID for the tree', action='store_true')
     add_parser.add_argument('--rooted', help='this is a rooted tree', action='store_true')
 
@@ -360,7 +342,6 @@ def main():
     args = parser.parse_args()
 
     kwargs = {}
-    if args.store: kwargs['storage_name'] = args.store
     if args.dsn: kwargs['dsn'] = args.dsn
     if args.user: kwargs['user'] = args.user
     if args.password: kwargs['password'] = args.password
@@ -368,7 +349,7 @@ def main():
 
     if args.command == 'add':
         # parse a tree and add it to the treestore
-        treestore.add_trees(args.file, args.format, args.uri, bulk_loader=args.bulk, puid=args.puid,
+        treestore.add_trees(args.file, args.format, args.uri, puid=args.puid,
                             rooted=args.rooted)
         
     elif args.command == 'get':
