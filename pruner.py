@@ -43,16 +43,16 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
 SELECT DISTINCT ?n ?length ?parent ?label
 WHERE {
-    GRAPH <%s> {
-        %s
+    GRAPH <''' + graph + '''> {
+        {?n a obo:CDAO_0000026} UNION {?n a obo:CDAO_0000108}
+        ''' + ((
+'?n obo:CDAO0000179 <%s> . \noption(transitive, t_min(0)) .' % mrca
+) if mrca else '') + '''
         OPTIONAL { ?n obo:CDAO_0000187 [ rdfs:label ?label ] . }
         OPTIONAL { ?n obo:CDAO_0000143 [ obo:CDAO_0000193 [ obo:CDAO_0000215 ?length ] ] . }
         OPTIONAL { ?n obo:CDAO_0000179 ?parent . }
     }
-}''' % (graph, ('''?n obo:CDAO_0000179 <%s> 
-option(transitive, t_min(0)) .''' % mrca) if mrca 
-else 
-'')
+}'''
     cursor.execute(query)
     
     root = None
@@ -68,7 +68,7 @@ else
                 clade = bp.CDAO.Clade(name=label, branch_length=float(edge_length) if edge_length else None)
                 nodes[node_id] = clade
             
-            if root is None and node_id == mrca:
+            if root is None and ((node_id == mrca) if mrca else (parent is None)):
                 root = nodes[node_id]
             elif parent and (parent in nodes):
                 nodes[parent].clades.append(clade)
@@ -76,11 +76,11 @@ else
                 redo.append(stmt)
                 
         stmts = redo
-
+    
     tree = bp.CDAO.Tree(root=root, rooted=True)
-
+    
     if prune: return pruned_tree(tree, prune)
-
+    
     return tree
 
 

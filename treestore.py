@@ -101,9 +101,9 @@ class Treestore:
         Tree(weight=1.0, rooted=False)
         '''
         
-        parser = bp.CDAOIO.Parser()
-        return parser.parse_model(RDF.Model(self.rdf_store), context=tree_uri)
-        
+        #parser = bp.CDAOIO.Parser()
+        #return parser.parse_model(RDF.Model(self.rdf_store), context=tree_uri)
+        return [pruner.subtree(None, self, tree_uri)]
 
     def serialize_trees(self, tree_uri='', format='newick', trees=None):
         '''Retrieve trees serialized to any format supported by Biopython.
