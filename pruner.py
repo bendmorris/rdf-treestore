@@ -1,4 +1,5 @@
 import Bio.Phylo as bp
+import sys
 
 
 def mrca(taxa, treestore, graph):
@@ -44,28 +45,29 @@ PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 SELECT DISTINCT ?n ?length ?parent ?label
 WHERE {
     GRAPH <''' + graph + '''> {
-        {?n a obo:CDAO_0000026} UNION {?n a obo:CDAO_0000108}
+        ?n obo:CDAO_0000200 ?tree .
+        ?n a ?type .
         ''' + ((
-'?n obo:CDAO0000179 <%s> . \noption(transitive, t_min(0)) .' % mrca
+"?n obo:CDAO_0000179 <%s> option(transitive, t_min(0), t_step('step_no') as ?steps) ." % mrca
 ) if mrca else '') + '''
         OPTIONAL { ?n obo:CDAO_0000187 [ rdfs:label ?label ] . }
         OPTIONAL { ?n obo:CDAO_0000143 [ obo:CDAO_0000193 [ obo:CDAO_0000215 ?length ] ] . }
         OPTIONAL { ?n obo:CDAO_0000179 ?parent . }
+        FILTER (?type = obo:CDAO_0000108 || ?type = obo:CDAO_0000026)
     }
-} ORDER BY ?n'''
+}''' +  ('ORDER BY ?steps ?n' if mrca else 'ORDER BY ?n')
     cursor.execute(query)
-    
     root = None
     nodes = {}
     stmts = cursor
     
-    for i in range(2):
+    for _ in range(2):
         redo = []
         for stmt in stmts:
             node_id, edge_length, parent, label = stmt
             
             if not node_id in nodes:
-                clade = bp.CDAO.Clade(name=label, branch_length=float(edge_length) if edge_length else None)
+                clade = bp.CDAO.Clade(name=label, branch_length=float(edge_length) if edge_length else 0)
                 nodes[node_id] = clade
             
             if root is None and ((node_id == mrca) if mrca else (parent is None)):
