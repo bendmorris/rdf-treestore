@@ -52,7 +52,7 @@ WHERE {
         OPTIONAL { ?n obo:CDAO_0000143 [ obo:CDAO_0000193 [ obo:CDAO_0000215 ?length ] ] . }
         OPTIONAL { ?n obo:CDAO_0000179 ?parent . }
     }
-}'''
+} ORDER BY ?n'''
     cursor.execute(query)
     
     root = None
