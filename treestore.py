@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import Bio.Phylo as bp
 import os
 import re
