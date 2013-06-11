@@ -8,10 +8,12 @@ setup(name='treestore',
       author='Ben Morris',
       author_email='ben@bendmorris.com',
       url='https://github.com/bendmorris/treestore',
-      install_requires=[
-                        'lscolumns',
-                        'pypyodbc',
-                        ],
+      requires=[
+                'lscolumns',
+                'pypyodbc',
+                'rdflib',
+                'biopython',
+                ],
       packages=['treestore'],
       package_dir={
                 'treestore':''
