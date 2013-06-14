@@ -223,7 +223,7 @@ ORDER BY ?label
 
 
     def get_subtree(self, contains=[], contains_ids=[], tree_uri=None,
-                    match_all=False, format='newick', prune=True, filter=None):
+                    match_all=False, format='newick', prune=True, filter=None, taxonomy=None):
 
         # TODO: filter is not being used. Use cql.py to parse the query, then convert the
         # requirements into SPARQL.
@@ -334,6 +334,8 @@ def main():
                               action='store_true')
     query_parser.add_argument('--complete', help="return complete subtree from MRCA; don't prune other taxa from the resulting tree",
                               action='store_true')
+    query_parser.add_argument('--taxonomy', help="the URI of a taxonomy graph to enable synonymy lookup",
+                              nargs='?', default=None)
 
     ann_parser = subparsers.add_parser('annotate', help='annotate tree with triples from RDF file')
     ann_parser.add_argument('file', help='annotation file')
@@ -386,7 +388,10 @@ def main():
     elif args.command == 'query':
         contains = set([s.strip() for s in args.contains.split(',')])
         print treestore.get_subtree(contains=contains, tree_uri=args.uri,
-                                    match_all=args.all, format=args.format, prune=not args.complete),
+                                    match_all=args.all, format=args.format, 
+                                    prune=not args.complete,
+                                    taxonomy=args.taxonomy
+                                    )
 
     elif args.command == 'annotate':
         annotate(args.uri, args.file, treestore, format=args.format)

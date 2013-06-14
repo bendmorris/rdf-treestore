@@ -2,16 +2,23 @@ import Bio.Phylo as bp
 import sys
 
 
-def mrca(taxa, treestore, graph):
+def mrca(taxa, treestore, graph, taxonomy=None):
     assert len(taxa) > 0
     
     cursor = treestore.get_cursor()
     
     mrca = None
     
-    for taxon in taxa:
-        try: ancestors = get_ancestors(graph, cursor, taxon)
+    for taxon in taxa[:]:
+        try:
+            if taxonomy:
+                taxon = get_valid_name(graph, cursor, taxon, taxonomy)
+                if not taxon:
+                    taxa.remove(taxon)
+                    continue
+            ancestors = get_ancestors(graph, cursor, taxon)
         except:
+            raise
             taxa.remove(taxon)
             continue
 
@@ -108,13 +115,16 @@ def pruned_tree(tree, contains):
 
 
 def get_ancestors(graph, cursor, taxon):
+    '''Query to get all ancestors of a node with a given label, starting with 
+    the most recent.'''
+    
     query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 
 SELECT DISTINCT ?ancestor
 WHERE {
-    GRAPH <%s> {
+    GRAPH <%s> { 
         ?t obo:CDAO_0000187 [ rdfs:label "%s" ] .
         OPTIONAL { ?t obo:CDAO_0000179 ?ancestor 
                    option(transitive, t_direction 1, t_step('step_no') as ?steps, 
@@ -127,3 +137,36 @@ ORDER BY ?steps
     results = cursor
     
     return results
+    
+    
+def get_valid_name(graph, cursor, taxon, taxonomy):
+    '''If taxon is the name of a node in this graph, return it; otherwise,
+    return a synonym from `taxonomy` that matches a name in this graph.'''
+    
+    query = '''sparql
+PREFIX obo: <http://purl.obolibrary.org/obo/>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?label
+WHERE {
+    { 
+        GRAPH <%s> { 
+            ?t obo:CDAO_0000187 [ rdfs:label ?label ] 
+            FILTER (?label = "%s") 
+        }
+    }
+    UNION
+    { 
+        GRAPH <%s> { ?t obo:CDAO_0000187 [ rdfs:label ?synonym ] }
+        GRAPH <%s> { 
+            ?x obo:CDAO_0000187 [ rdfs:label ?synonym ; rdfs:label ?label ]
+            FILTER (?label = "%s")
+        }
+    }
+''' % (graph, taxon, graph, taxonomy, taxon)
+    cursor.execute(query)
+    results = cursor
+    
+    try:
+        return results.next()[0]
+    except: return None
