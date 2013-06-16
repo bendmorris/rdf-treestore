@@ -237,8 +237,8 @@ ORDER BY ?label
             except StopIteration:
                 raise Exception("An appropriate tree for this query couldn't be found.")
         
-        mrca = pruner.mrca(list(contains), self, tree_uri)
-        tree = pruner.subtree(mrca, self, tree_uri, prune=contains if prune else False)
+        tree = pruner.subtree(list(contains), self, tree_uri, 
+                              taxonomy=taxonomy, prune=contains if prune else False)
 
         return self.serialize_trees(trees=[tree], format=format)
 
