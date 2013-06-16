@@ -160,6 +160,10 @@ def find_name(graph, cursor, taxon, taxonomy=None):
     '''If taxon is the name of a node in this graph, return it; otherwise,
     return a synonym from `taxonomy` that matches a name in this graph.'''
     
+    if taxon.split()[-1] == 'sp.':
+        # when species is unidentified, fall back to searching for the genus
+        taxon = ' '.join(taxon.split()[:-1])
+
     query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
