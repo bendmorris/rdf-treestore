@@ -289,14 +289,14 @@ def main():
 
     add_parser = subparsers.add_parser('add', help='add trees to treestore')
     add_parser.add_argument('file', help='tree file')
-    add_parser.add_argument('format', help='file format (%s)' % input_formats)
     add_parser.add_argument('uri', help='tree uri (default=file name)', nargs='?', default=None)
+    add_parser.add_argument('-f', '--format', help='file format (%s)' % input_formats)
     add_parser.add_argument('--puid', help='create a pseudo-unique ID for the tree', action='store_true')
     add_parser.add_argument('--rooted', help='this is a rooted tree', action='store_true')
 
     get_parser = subparsers.add_parser('get', help='retrieve trees from treestore')
     get_parser.add_argument('uri', help='tree uri')
-    get_parser.add_argument('format', help='serialization format (%s) (default=newick)' % output_formats, 
+    get_parser.add_argument('-f', '--format', help='serialization format (%s) (default=newick)' % output_formats, 
                             nargs='?', default='newick')
 
     rm_parser = subparsers.add_parser('rm', help='remove trees from treestore')
@@ -326,10 +326,10 @@ def main():
     query_parser.add_argument('contains', 
         help='comma-delimited list of species that must be contained in each returned tree',
         nargs='?')
-    query_parser.add_argument('format', help='serialization format (%s) (default=newick)' % output_formats, 
-                              nargs='?', default='newick')
     query_parser.add_argument('uri', help='tree uri (default=select automatically)', 
                               nargs='?', default=None)
+    query_parser.add_argument('-f', '--format', help='serialization format (%s) (default=newick)' % output_formats, 
+                              nargs='?', default='newick')
     query_parser.add_argument('--all', help='only return trees that contain all given species', 
                               action='store_true')
     query_parser.add_argument('--complete', help="return complete subtree from MRCA; don't prune other taxa from the resulting tree",
