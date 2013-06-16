@@ -83,11 +83,16 @@ WHERE {
         redo = []
         for stmt in stmts:
             node_id, edge_length, parent, label = stmt
+
+            # replace synonymous names from the phylogeny with names from the query
+            if replace and label in replace: label = replace[label]
             
+            # create a clade for each node, and store in a dictionary by URI
             if not node_id in nodes:
                 clade = bp.CDAO.Clade(name=label, branch_length=float(edge_length) if edge_length else 1)
                 nodes[node_id] = clade
             
+            # this is the root node if it has no parent or if it's the MRCA
             if root is None and ((node_id == mrca) if mrca else (parent is None)):
                 root = nodes[node_id]
             elif parent and (parent in nodes):
@@ -99,17 +104,8 @@ WHERE {
     
     tree = bp.CDAO.Tree(root=root, rooted=True)
     
-    if prune: result = pruned_tree(tree, taxa)
+    if prune: result = pruned_tree(tree, old_taxa)
     else: result = tree
-    
-    # replace synonymous names from the phylogeny with names from the query
-    if replace:
-        for x in tree.find_elements():
-            if x.name in replace:
-                old_name = x.name
-                x.name = replace[x.name]
-                del replace[old_name]
-                if not replace: break
     
     return result
 
