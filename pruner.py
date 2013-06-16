@@ -99,7 +99,7 @@ WHERE {
     
     tree = bp.CDAO.Tree(root=root, rooted=True)
     
-    if prune: result = pruned_tree(tree, prune)
+    if prune: result = pruned_tree(tree, taxa)
     else: result = tree
     
     # replace synonymous names from the phylogeny with names from the query
@@ -183,7 +183,7 @@ WHERE {
     }
 }''' % (graph, taxonomy, taxon)
     query += '\n}'
-
+    #print query
     cursor.execute(query)
     results = cursor
     

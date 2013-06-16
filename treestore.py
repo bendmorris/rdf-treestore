@@ -238,7 +238,7 @@ ORDER BY ?label
                 raise Exception("An appropriate tree for this query couldn't be found.")
         
         tree = pruner.subtree(list(contains), self, tree_uri, 
-                              taxonomy=taxonomy, prune=contains if prune else False)
+                              taxonomy=taxonomy, prune=prune)
 
         return self.serialize_trees(trees=[tree], format=format)
 
