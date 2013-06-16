@@ -49,7 +49,8 @@ def subtree(taxa, treestore, graph, taxonomy=None, prune=False):
         
         # these taxa were changed by the MRCA query; they're either None (couldn't
         # be found) or the name of a synonym
-        replace = {new:old for (new, old) in zip(taxa, old_taxa) if old != new}
+        replace = {new:old for (new, old) in zip(taxa, old_taxa) 
+                   if new and old != new}
     else:
         mrca, replace = None, None
     

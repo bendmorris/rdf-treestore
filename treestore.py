@@ -290,7 +290,8 @@ def main():
     add_parser = subparsers.add_parser('add', help='add trees to treestore')
     add_parser.add_argument('file', help='tree file')
     add_parser.add_argument('uri', help='tree uri (default=file name)', nargs='?', default=None)
-    add_parser.add_argument('-f', '--format', help='file format (%s)' % input_formats)
+    add_parser.add_argument('-f', '--format', help='file format (%s)' % input_formats,
+                            nargs='?', default='newick')
     add_parser.add_argument('--puid', help='create a pseudo-unique ID for the tree', action='store_true')
     add_parser.add_argument('--rooted', help='this is a rooted tree', action='store_true')
 
