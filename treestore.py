@@ -7,13 +7,14 @@ import shutil
 import sys
 import pypyodbc as pyodbc
 import pruner
+import tempfile
 import annotate
 from cStringIO import StringIO
 
 
 __version__ = '0.1.2'
-treestore_dir = os.path.expanduser('~/treestore/')
-if not os.path.exists(treestore_dir): os.mkdir(treestore_dir)
+treestore_dir = os.path.join(tempfile.gettempdir(), 'treestore')
+if not os.path.exists(treestore_dir): os.makedirs(treestore_dir)
 
 class Treestore:
     def __init__(self, storage_name='virtuoso', dsn='Virtuoso', 
