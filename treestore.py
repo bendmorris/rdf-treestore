@@ -148,9 +148,8 @@ ORDER BY ?graph
         return [str(result[0]) for result in cursor]
 
 
-    def list_trees_containing_taxa(self, contains=[], match_all=False, show_counts=True):
-        '''List all trees that contain the specified taxa. If match_all is 
-        True, only return trees that match the entire list.'''
+    def list_trees_containing_taxa(self, contains=[], show_counts=True):
+        '''List all trees that contain the specified taxa.'''
 
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
@@ -170,9 +169,8 @@ ORDER BY DESC(?matches)
         cursor.execute(query)
         
         for result in cursor:
-            if (not match_all) or (int(result[1]) == len(contains)):
-                if show_counts: yield '%s (%s)' % (result[0], result[1])
-                else: yield str(result[0])
+            if show_counts: yield (result[0], result[1])
+            else: yield str(result[0])
 
 
     def get_names(self, tree_uri=None, format=None):
@@ -223,14 +221,14 @@ ORDER BY ?label
 
 
     def get_subtree(self, contains=[], contains_ids=[], tree_uri=None,
-                    match_all=False, format='newick', prune=True, filter=None, taxonomy=None):
+                    format='newick', prune=True, filter=None, taxonomy=None):
 
         # TODO: filter is not being used. Use cql.py to parse the query, then convert the
         # requirements into SPARQL.
 
         if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
         if not tree_uri:
-            trees = self.list_trees_containing_taxa(contains=contains, match_all=match_all, show_counts=False)
+            trees = self.list_trees_containing_taxa(contains=contains, show_counts=False)
 
             try:
                 tree_uri = trees.next()
@@ -307,8 +305,6 @@ def main():
     ls_parser.add_argument('contains', 
         help='comma-delimited list of species that must be contained in each returned tree (default=none)',
         nargs='?', default='')
-    ls_parser.add_argument('--all', help='only return trees that contain all given species', 
-                           action='store_true')
 
     names_parser = subparsers.add_parser('names', 
                                          help='return a comma-separated list of all taxa names')
@@ -331,8 +327,6 @@ def main():
                               nargs='?', default=None)
     query_parser.add_argument('-f', '--format', help='serialization format (%s) (default=newick)' % output_formats, 
                               nargs='?', default='newick')
-    query_parser.add_argument('--all', help='only return trees that contain all given species', 
-                              action='store_true')
     query_parser.add_argument('--complete', help="return complete subtree from MRCA; don't prune other taxa from the resulting tree",
                               action='store_true')
     query_parser.add_argument('--taxonomy', help="the URI of a taxonomy graph to enable synonymy lookup",
@@ -369,8 +363,8 @@ def main():
         contains = args.contains
         if contains: 
             contains = set([s.strip() for s in contains.split(',')])
-            trees = [r for r in treestore.list_trees_containing_taxa(
-                        contains=contains, match_all=args.all)]
+            trees = ['%s (%s)' % r if isinstance(r, tuple) else r 
+                     for r in treestore.list_trees_containing_taxa(contains=contains)]
         else:
             trees = treestore.list_trees()
 
@@ -389,7 +383,7 @@ def main():
     elif args.command == 'query':
         contains = set([s.strip() for s in args.contains.split(',')])
         print treestore.get_subtree(contains=contains, tree_uri=args.uri,
-                                    match_all=args.all, format=args.format, 
+                                    format=args.format, 
                                     prune=not args.complete,
                                     taxonomy=args.taxonomy
                                     )
