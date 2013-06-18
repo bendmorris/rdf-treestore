@@ -167,6 +167,7 @@ def find_name(graph, cursor, taxon, taxonomy=None):
     query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 
 SELECT ?t ?label ''' + ('?synonym' if taxonomy else '') + '''
 WHERE { 
@@ -179,8 +180,10 @@ WHERE {
     if taxonomy: query += ''' UNION {
     GRAPH <%s> { ?t obo:CDAO_0000187 [ rdfs:label ?synonym ] }
     GRAPH <%s> { 
-        ?x obo:CDAO_0000187 [ rdfs:label ?synonym ; rdfs:label ?label ]
-        FILTER (?label = "%s")
+        ?x obo:CDAO_0000187 [ ?l1 ?synonym ; ?l2 ?label ]
+        FILTER (?label = "%s" && 
+                ?l1 in (rdfs:label, skos:altLabel) &&
+                ?l2 in (rdfs:label, rdfs:altLabel))
     }
 }''' % (graph, taxonomy, taxon)
     query += '\n}'
