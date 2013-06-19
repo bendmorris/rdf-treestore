@@ -10,6 +10,7 @@ import pruner
 import tempfile
 import annotate
 import phylolabel
+import time
 from cStringIO import StringIO
 
 
@@ -48,8 +49,10 @@ class Treestore:
         '''
         
         if tree_uri is None: tree_uri = os.path.basename(tree_file)
-
-        tempfile_name = '%s.cdao' % sha.sha().hexdigest()
+        
+        hash = sha.sha()
+        hash.update(str(time.time()))
+        tempfile_name = '%s.cdao' % hash.hexdigest()
 
         if taxonomy:
             # label higher-order taxa before adding
@@ -89,6 +92,8 @@ class Treestore:
         # the next treestore add may not work if you don't explicitly delete 
         # the bulk load list from the Virtuoso db after it's done
         cursor.execute('DELETE FROM DB.DBA.load_list')
+        
+        os.remove(os.path.join(treestore_dir, tempfile_name))
         
         
     def get_trees(self, tree_uri):
