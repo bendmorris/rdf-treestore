@@ -13,6 +13,7 @@ setup(name='treestore',
                 'pypyodbc',
                 'rdflib',
                 'biopython',
+                'phylolabel',
                 ],
       packages=['treestore'],
       package_dir={

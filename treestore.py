@@ -9,6 +9,7 @@ import pypyodbc as pyodbc
 import pruner
 import tempfile
 import annotate
+import phylolabel
 from cStringIO import StringIO
 
 
@@ -37,7 +38,8 @@ class Treestore:
         connection = self.odbc_connection
         return connection.cursor()
 
-    def add_trees(self, tree_file, format, tree_uri=None, puid=False, rooted=False):
+    def add_trees(self, tree_file, format, tree_uri=None, rooted=False, 
+        taxonomy=None, tax_root=None):
         '''Convert trees residing in a text file into RDF, and add them to the
         underlying RDF store with a context node for retrieval.
         
@@ -47,34 +49,44 @@ class Treestore:
         
         if tree_uri is None: tree_uri = os.path.basename(tree_file)
 
-        if puid:
-            # Create a pseudo-unique URI for trees, if the tree name is not a URI already:
-            if not re.match(r'\w+://', tree_uri):
-                puid = sha.new(open(tree_file).read()).hexdigest()
-                tree_uri = 'http://phylotastic.org/hack2/%s/%s' % (puid, tree_uri)
+        tempfile_name = '%s.cdao' % sha.sha().hexdigest()
 
-        if format == 'cdao':
-            f1, f2 = tree_file, os.path.join(treestore_dir, 'temp.cdao')
-            if not os.path.abspath(f1) == os.path.abspath(f2):
-                shutil.copy(f1, f2)
+        if taxonomy:
+            # label higher-order taxa before adding
+            phylogeny = bp.read(tree_file, format)
+            taxonomy = self.get_trees(taxonomy)[0]
+            phylolabel.label_tree(phylogeny, taxonomy, tax_root=tax_root)
+            with open(os.path.join(treestore_dir, tempfile_name), 'w') as output_file:
+                bp._io.write([phylogeny], output_file, 'cdao')
+            
         else:
-            bp.convert(tree_file, format, os.path.join(treestore_dir, 'temp.cdao'), 'cdao', 
-                       tree_uri=tree_uri, rooted=rooted)
-    
+            if format == 'cdao':
+                # if it's already in CDAO format, just copy it
+                f1, f2 = tree_file, os.path.join(treestore_dir, tempfile_name)
+                if not os.path.abspath(f1) == os.path.abspath(f2):
+                    shutil.copy(f1, f2)
+            else:
+                # otherwise, convert to CDAO
+                bp.convert(tree_file, format, os.path.join(treestore_dir, tempfile_name), 'cdao', 
+                           tree_uri=tree_uri, rooted=rooted)
+        
+        # run the bulk loader to load the CDAO tree into Virtuoso
         cursor = self.get_cursor()
-    
+        
         update_stmt = 'sparql load <file://%s> into <%s>' % (
-            os.path.abspath(os.path.join(treestore_dir, 'temp.cdao')), tree_uri)
-    
-        load_stmt = "ld_dir ('%s', 'temp.cdao', '%s')" % (
-            os.path.abspath(treestore_dir), tree_uri)
+            os.path.abspath(os.path.join(treestore_dir, tempfile_name)), tree_uri)
+        
+        load_stmt = "ld_dir ('%s', '%s', '%s')" % (
+            os.path.abspath(treestore_dir), tempfile_name, tree_uri)
         print load_stmt
         cursor.execute(load_stmt)
-    
+        
         update_stmt = "rdf_loader_run()"
         print update_stmt
         cursor.execute(update_stmt)
-
+        
+        # the next treestore add may not work if you don't explicitly delete 
+        # the bulk load list from the Virtuoso db after it's done
         cursor.execute('DELETE FROM DB.DBA.load_list')
         
         
@@ -291,8 +303,11 @@ def main():
     add_parser.add_argument('uri', help='tree uri (default=file name)', nargs='?', default=None)
     add_parser.add_argument('-f', '--format', help='file format (%s)' % input_formats,
                             nargs='?', default='newick')
-    add_parser.add_argument('--puid', help='create a pseudo-unique ID for the tree', action='store_true')
     add_parser.add_argument('--rooted', help='this is a rooted tree', action='store_true')
+    add_parser.add_argument('--taxonomy', help="the URI of a taxonomy graph to label higher-order taxa",
+                            nargs='?', default=None)
+    add_parser.add_argument('--tax-root', help="the name of the top-most taxonomic group in the tree, used to subset the taxonomy and avoid homonymy issues",
+                            nargs='?', default=None)
 
     get_parser = subparsers.add_parser('get', help='retrieve trees from treestore')
     get_parser.add_argument('uri', help='tree uri')
@@ -348,8 +363,8 @@ def main():
 
     if args.command == 'add':
         # parse a tree and add it to the treestore
-        treestore.add_trees(args.file, args.format, args.uri, puid=args.puid,
-                            rooted=args.rooted)
+        treestore.add_trees(args.file, args.format, args.uri, rooted=args.rooted,
+                            taxonomy=args.taxonomy, tax_root=args.tax_root)
         
     elif args.command == 'get':
         # get a tree, serialize in specified format, and output to stdout
