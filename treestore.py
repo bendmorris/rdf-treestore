@@ -54,7 +54,8 @@ class Treestore:
         if taxonomy:
             # label higher-order taxa before adding
             phylogeny = bp.read(tree_file, format)
-            taxonomy = self.get_trees(taxonomy)[0]
+            if isinstance(taxonomy, basestring):
+                taxonomy = self.get_trees(taxonomy)[0]
             phylolabel.label_tree(phylogeny, taxonomy, tax_root=tax_root)
             with open(os.path.join(treestore_dir, tempfile_name), 'w') as output_file:
                 bp._io.write([phylogeny], output_file, 'cdao')
