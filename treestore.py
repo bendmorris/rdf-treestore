@@ -167,7 +167,7 @@ ORDER BY ?graph
         return [str(result[0]) for result in cursor]
 
 
-    def list_trees_containing_taxa(self, contains=[], show_counts=True):
+    def list_trees_containing_taxa(self, contains=[], show_counts=False):
         '''List all trees that contain the specified taxa.'''
 
         query = '''sparql
@@ -188,7 +188,7 @@ ORDER BY DESC(?matches)
         cursor.execute(query)
         
         for result in cursor:
-            if show_counts: yield (result[0], result[1])
+            if show_counts: yield '%s (%s)' % (result[0], result[1])
             else: yield str(result[0])
 
 
@@ -303,7 +303,8 @@ def main():
     parser.add_argument('-p', '--password', help='ODBC password (default=dba)')
 
     subparsers = parser.add_subparsers(help='sub-command help', dest='command')
-
+    
+    # treestore add: add trees to the database
     add_parser = subparsers.add_parser('add', help='add trees to treestore')
     add_parser.add_argument('file', help='tree file')
     add_parser.add_argument('uri', help='tree uri (default=file name)', nargs='?', default=None)
@@ -314,37 +315,43 @@ def main():
                             nargs='?', default=None)
     add_parser.add_argument('--tax-root', help="the name of the top-most taxonomic group in the tree, used to subset the taxonomy and avoid homonymy issues",
                             nargs='?', default=None)
-
+    
+    # treestore get: download an entire tree
     get_parser = subparsers.add_parser('get', help='retrieve trees from treestore')
     get_parser.add_argument('uri', help='tree uri')
     get_parser.add_argument('-f', '--format', help='serialization format (%s) (default=newick)' % output_formats, 
                             nargs='?', default='newick')
-
+    
+    # treestore rm: delete trees from the database
     rm_parser = subparsers.add_parser('rm', help='remove trees from treestore')
     rm_parser.add_argument('uri', help='tree uri')
 
+    # treestore ls: list trees
     ls_parser = subparsers.add_parser('ls', help='list all trees in treestore')
-    ls_parser.add_argument('contains', 
-        help='comma-delimited list of species that must be contained in each returned tree (default=none)',
-        nargs='?', default='')
-
+    ls_parser.add_argument('contains', help='comma-delimited list of desired taxa',
+                           nargs='?', default='')
+    ls_parser.add_argument('--counts', help="display the number of matched taxa next to each tree URI",
+                           action='store_true')
+    
+    # treestore names: get list of taxa contained in a tree
     names_parser = subparsers.add_parser('names', 
                                          help='return a comma-separated list of all taxa names')
     names_parser.add_argument('uri', help='tree uri (default=all trees)', 
                               nargs='?', default=None)
     names_parser.add_argument('-f', '--format', help='file format (json, csv, xml) (default=csv)', 
                               default='csv')
-
+    
+    # treestore count: count the number of labeled nodes
     count_parser = subparsers.add_parser('count', 
-                                         help='returns the number of labelled nodes in a tree')
+                                         help='returns the number of labeled nodes in a tree')
     count_parser.add_argument('uri', help='tree uri (default=all trees)', 
                               nargs='?', default=None)
-
+    
+    # treestore query: create a subtree from a list of taxa
     query_parser = subparsers.add_parser('query', 
                                          help='retrieve the best subtree containing a given set of taxa')
-    query_parser.add_argument('contains', 
-        help='comma-delimited list of species that must be contained in each returned tree',
-        nargs='?')
+    query_parser.add_argument('contains', help='comma-delimited list of desired taxa',
+                              nargs='?')
     query_parser.add_argument('uri', help='tree uri (default=select automatically)', 
                               nargs='?', default=None)
     query_parser.add_argument('-f', '--format', help='serialization format (%s) (default=newick)' % output_formats, 
@@ -353,7 +360,8 @@ def main():
                               action='store_true')
     query_parser.add_argument('--taxonomy', help="the URI of a taxonomy graph to enable synonymy lookup",
                               nargs='?', default=None)
-
+    
+    # treestore annotate: add metadata annotations to tree
     ann_parser = subparsers.add_parser('annotate', help='annotate tree with triples from RDF file')
     ann_parser.add_argument('file', help='annotation file')
     ann_parser.add_argument('format', help='annotation file format (default=ntriples)')
@@ -385,8 +393,7 @@ def main():
         contains = args.contains
         if contains: 
             contains = set([s.strip() for s in contains.split(',')])
-            trees = ['%s (%s)' % r if isinstance(r, tuple) else r 
-                     for r in treestore.list_trees_containing_taxa(contains=contains)]
+            trees = list(treestore.list_trees_containing_taxa(contains=contains, show_counts=args.counts))
         else:
             trees = treestore.list_trees()
 
