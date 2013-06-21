@@ -6,9 +6,9 @@ import sha
 import shutil
 import sys
 import pypyodbc as pyodbc
-import pruner
+from pruner import Prunable
+from annotate import Annotatable
 import tempfile
-import annotate
 import phylolabel
 import time
 from cStringIO import StringIO
@@ -18,7 +18,7 @@ __version__ = '0.1.2'
 treestore_dir = os.path.join(tempfile.gettempdir(), 'treestore')
 if not os.path.exists(treestore_dir): os.makedirs(treestore_dir)
 
-class Treestore:
+class Treestore(Prunable, Annotatable):
     def __init__(self, storage_name='virtuoso', dsn='Virtuoso', 
                  user='dba', password='dba', storage=None):
         '''Create a treestore object from an ODBC connection with given DSN,
@@ -106,7 +106,7 @@ class Treestore:
         Tree(weight=1.0, rooted=False)
         '''
         
-        return [pruner.subtree(None, self, tree_uri)]
+        return [self.subtree(None, tree_uri)]
 
     def serialize_trees(self, tree_uri='', format='newick', trees=None):
         '''Retrieve trees serialized to any format supported by Biopython.
@@ -254,8 +254,8 @@ ORDER BY ?label
             except StopIteration:
                 raise Exception("An appropriate tree for this query couldn't be found.")
         
-        tree = pruner.subtree(list(contains), self, tree_uri, 
-                              taxonomy=taxonomy, prune=prune)
+        tree = self.subtree(list(contains), tree_uri, 
+                            taxonomy=taxonomy, prune=prune)
 
         return self.serialize_trees(trees=[tree], format=format)
 
@@ -418,7 +418,7 @@ def main():
                                     )
 
     elif args.command == 'annotate':
-        annotate(args.uri, args.file, treestore, format=args.format)
+        treestore.annotate(args.uri, args.file, format=args.format)
 
 
 if __name__ == '__main__':
