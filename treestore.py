@@ -164,7 +164,7 @@ ORDER BY ?graph
         cursor = self.get_cursor()
         cursor.execute(query)
         
-        return [str(result[0]) for result in cursor]
+        return (str(result[0]) for result in cursor)
 
 
     def list_trees_containing_taxa(self, contains=[], show_counts=False, filter=None):
@@ -252,24 +252,22 @@ PREFIX doi: <http://dx.doi.org/>''' + query
         
         
     def get_tree_info(self, tree_uri=None):
-        query = '''sparql
-PREFIX obo: <http://purl.obolibrary.org/obo/>
-
-SELECT ?graph ?tree (count(?otu) as ?taxa)
+        query = self.build_query('''
+SELECT ?graph (count(?otu) as ?taxa) ?doi
 WHERE {
     GRAPH ?graph {
         ?tree obo:CDAO_0000148 [] .
         ?otu obo:CDAO_0000187 [] .
+        OPTIONAL { ?tree bibo:cites ?doi . }
     }
     %s
 } 
-GROUP BY ?graph ?tree
 ORDER BY ?graph
-''' % ('' if tree_uri is None else ('FILTER(?graph = <%s>)' % tree_uri))
+''' % ('' if tree_uri is None else ('FILTER(?graph = <%s>)' % tree_uri)))
         cursor = self.get_cursor()
         cursor.execute(query)
         
-        return [{k:v for k, v in zip(('uri', 'tree', 'taxa'), result) } for result in cursor]
+        return [{k:v for k, v in zip(('tree', 'taxa', 'doi'), result) } for result in cursor]
 
 
 def main():
@@ -382,7 +380,7 @@ def main():
             contains = set([s.strip() for s in contains.split(',')])
             trees = list(treestore.list_trees_containing_taxa(contains=contains, show_counts=args.counts))
         else:
-            trees = treestore.list_trees()
+            trees = list(treestore.list_trees())
 
         if not trees: exit()
         
