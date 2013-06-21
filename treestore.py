@@ -363,9 +363,10 @@ def main():
     
     # treestore annotate: add metadata annotations to tree
     ann_parser = subparsers.add_parser('annotate', help='annotate tree with triples from RDF file')
-    ann_parser.add_argument('file', help='annotation file')
-    ann_parser.add_argument('format', help='annotation file format (default=ntriples)')
     ann_parser.add_argument('uri', help='tree uri', default=None)
+    ann_parser.add_argument('--file', help='annotation file')
+    ann_parser.add_argument('--text', help='annotation, in turtle format', default=None)
+    ann_parser.add_argument('--doi', help='tree source DOI', default=None)
 
     args = parser.parse_args()
 
@@ -418,7 +419,7 @@ def main():
                                     )
 
     elif args.command == 'annotate':
-        treestore.annotate(args.uri, args.file, format=args.format)
+        treestore.annotate(args.uri, annotations=args.text, annotation_file=args.file, doi=args.doi)
 
 
 if __name__ == '__main__':
