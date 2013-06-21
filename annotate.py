@@ -19,14 +19,7 @@ class Annotatable:
             raise Exception('No annotation source (string, file, or DOI)  was specified.')
             
         
-        insert_stmt = '''sparql
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX dc: <http://purl.org/dc/elements/1.1/>
-PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-PREFIX bibo: <http://purl.org/ontology/bibo/>
-PREFIX obo: <http://purl.obolibrary.org/obo/>
-
+        insert_stmt = self.build_query('''
 WITH <%s>
 INSERT {
     %s
@@ -34,7 +27,7 @@ INSERT {
 WHERE {
     ?tree obo:CDAO_0000148 [] .
 }
-        ''' % (tree_uri, annotations)
+        ''' % (tree_uri, annotations))
         print insert_stmt
         
         cursor.execute(insert_stmt)

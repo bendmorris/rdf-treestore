@@ -3,6 +3,28 @@ import sys
 
 
 class Prunable:
+    def get_subtree(self, contains=[], contains_ids=[], tree_uri=None,
+                    format='newick', prune=True, filter=None, taxonomy=None):
+        # TODO: filter is not being used. Use cql.py to parse the query, then convert the
+        # requirements into SPARQL.
+        
+        if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
+        if not tree_uri:
+            trees = self.list_trees_containing_taxa(contains=contains,
+                                                    show_counts=False,
+                                                    filter=filter)
+        
+            try:
+                tree_uri = trees.next()
+            except StopIteration:
+                raise Exception("An appropriate tree for this query couldn't be found.")
+        
+        tree = self.subtree(list(contains), tree_uri, 
+                            taxonomy=taxonomy, prune=prune)
+        
+        return self.serialize_trees(trees=[tree], format=format)
+        
+        
     def find_mrca(self, taxa, graph, taxonomy=None):
         assert len(taxa) > 0
         

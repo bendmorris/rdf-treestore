@@ -167,23 +167,21 @@ ORDER BY ?graph
         return [str(result[0]) for result in cursor]
 
 
-    def list_trees_containing_taxa(self, contains=[], show_counts=False):
+    def list_trees_containing_taxa(self, contains=[], show_counts=False, filter=None):
         '''List all trees that contain the specified taxa.'''
 
-        query = '''sparql
-PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-
+        query = self.build_query('''
 SELECT DISTINCT ?graph (count(DISTINCT ?label) as ?matches)
 WHERE {
     GRAPH ?graph {
         ?tree obo:CDAO_0000148 [] .
         { ?match rdfs:label ?label . FILTER (?label in (%s)) }
+        %s
     }
 } 
 GROUP BY ?graph ?tree
 ORDER BY DESC(?matches)
-''' % (', '.join(['"%s"' % contain for contain in contains]))
+''' % (', '.join(['"%s"' % contain for contain in contains]), filter if filter else ''))
         cursor = self.get_cursor()
         cursor.execute(query)
         
@@ -237,36 +235,18 @@ ORDER BY ?label
             return ','.join(sorted(list(set([str(result[1]) for result in results]))))
         else: 
             return [str(result[1]) for result in results]
-
-
-    def get_subtree(self, contains=[], contains_ids=[], tree_uri=None,
-                    format='newick', prune=True, filter=None, taxonomy=None):
-
-        # TODO: filter is not being used. Use cql.py to parse the query, then convert the
-        # requirements into SPARQL.
-
-        if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
-        if not tree_uri:
-            trees = self.list_trees_containing_taxa(contains=contains, show_counts=False)
-
-            try:
-                tree_uri = trees.next()
-            except StopIteration:
-                raise Exception("An appropriate tree for this query couldn't be found.")
         
-        tree = self.subtree(list(contains), tree_uri, 
-                            taxonomy=taxonomy, prune=prune)
-
-        return self.serialize_trees(trees=[tree], format=format)
-
-
-    def sparql_query(self, query):
-        if not query.startswith('sparql'): query = 'sparql\n' + query
-        cursor = self.get_cursor()
-        cursor.execute(query)
-        return cursor
-
-
+        
+    def build_query(self, query):
+        return '''sparql
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dc: <http://purl.org/dc/elements/1.1/>
+PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX bibo: <http://purl.org/ontology/bibo/>
+PREFIX obo: <http://purl.obolibrary.org/obo/>''' + query
+        
+        
     def get_tree_info(self, tree_uri=None):
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
@@ -284,7 +264,7 @@ ORDER BY ?graph
 ''' % ('' if tree_uri is None else ('FILTER(?graph = <%s>)' % tree_uri))
         cursor = self.get_cursor()
         cursor.execute(query)
-
+        
         return [{k:v for k, v in zip(('uri', 'tree', 'taxa'), result) } for result in cursor]
 
 
@@ -360,6 +340,8 @@ def main():
                               action='store_true')
     query_parser.add_argument('--taxonomy', help="the URI of a taxonomy graph to enable synonymy lookup",
                               nargs='?', default=None)
+    query_parser.add_argument('--filter', help="SPARQL graph pattern that returned trees must match",
+                              nargs='?', default=None)
     
     # treestore annotate: add metadata annotations to tree
     ann_parser = subparsers.add_parser('annotate', help='annotate tree with triples from RDF file')
@@ -415,7 +397,8 @@ def main():
         print treestore.get_subtree(contains=contains, tree_uri=args.uri,
                                     format=args.format, 
                                     prune=not args.complete,
-                                    taxonomy=args.taxonomy
+                                    taxonomy=args.taxonomy,
+                                    filter=args.filter
                                     )
 
     elif args.command == 'annotate':
