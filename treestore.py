@@ -162,35 +162,16 @@ class Treestore(Prunable, Annotatable):
     def list_trees(self):
         '''List all trees in the treestore.
         '''
-
-        query = '''sparql
-PREFIX obo: <http://purl.obolibrary.org/obo/>
-
-SELECT DISTINCT ?graph
-WHERE {
-    GRAPH ?graph {
-        [] obo:CDAO_0000148 [] . 
-    }
-}
-ORDER BY ?graph
-'''
-        cursor = self.get_cursor()
-        cursor.execute(query)
         
-        return (str(result[0]) for result in cursor)
+        return self.list_trees_containing_taxa()
 
 
     def list_trees_containing_taxa(self, contains=[], show_counts=False, taxonomy=None, filter=None):
         '''List all trees that contain the specified taxa.'''
         
-        if not contains:
-            for x in (x for x in self.list_trees()):
-                yield x
-            return
-        
         taxa_list = ', '.join(['"%s"' % contain for contain in contains])
         
-        if taxonomy:
+        if taxonomy and contains:
             taxonomy = self.uri_from_id(taxonomy)
             syn_match_query = '''
 UNION {
@@ -211,7 +192,8 @@ WHERE {
 {
     GRAPH ?graph {
         ?tree obo:CDAO_0000148 [] .
-        { ?match rdfs:label ?label . FILTER (?label in (%s)) }
+        ''' + (('{ ?match rdfs:label ?label . FILTER (?label in (%s)) }'%taxa_list) if contains else '') 
++ '''
         %s
     }
 }
@@ -219,7 +201,7 @@ WHERE {
 }
 GROUP BY ?graph ?tree
 ORDER BY DESC(?matches) ?graph
-''' % (taxa_list, filter if filter else '', syn_match_query))
+''' % (filter if filter else '', syn_match_query))
         cursor = self.get_cursor()
         #print query
         cursor.execute(query)
