@@ -357,6 +357,8 @@ def main():
                            action='store_true')
     ls_parser.add_argument('-l', help="list one per line; don't try to pretty-print",
                            action='store_true')
+    ls_parser.add_argument('-f', help="show full URIs instead of just IDs",
+                           action='store_true')
     ls_parser.add_argument('--taxonomy', help="the URI of a taxonomy graph to enable synonymy lookup",
                            nargs='?', default=None)
     
@@ -432,7 +434,7 @@ def main():
         
         if not trees: exit()
 
-        trees = [x[len(base_uri):] if x.startswith(base_uri) else x for x in trees]
+        trees = [x[len(base_uri):] if x.startswith(base_uri) and not args.f else x for x in trees]
         
         if args.l:
             print '\n'.join(trees)
