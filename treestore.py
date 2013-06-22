@@ -422,7 +422,7 @@ def main():
         if contains: 
             contains = set([s.strip() for s in contains.split(',')])
             trees = list(treestore.list_trees_containing_taxa(contains=contains, taxonomy=args.taxonomy, show_counts=args.counts))
-            if show_counts: trees = ['%s (%s)' % tree or tree in trees]
+            if args.counts: trees = ['%s (%s)' % tree or tree in trees]
             else: trees = [str(x) for x in trees]
         else:
             trees = list(treestore.list_trees())
