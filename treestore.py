@@ -30,9 +30,11 @@ class Treestore(Prunable, Annotatable):
         self.load_dir = load_dir
         self.base_uri = base_uri
 
-    def uri_from_id(self, x):
+    @classmethod
+    def uri_from_id(self, x, base_uri=base_uri):
         if '://' in x: return x
-        return posixpath.join(self.base_uri, x)
+        if not x.endswith('/'): x += '/'
+        return posixpath.join(base_uri, x)
 
 
     def get_connection(self):
@@ -293,6 +295,20 @@ ORDER BY ?graph
         cursor.execute(query)
         
         return [{k:v for k, v in zip(('tree', 'taxa', 'doi'), result) } for result in cursor]
+    
+    def get_object_info(self, object):
+        query = '''sparql
+SELECT ?v ?o
+WHERE
+{
+    ?s ?v ?o .
+    FILTER (?s = <%s>)
+}''' % object
+
+        cursor = self.get_cursor()
+        cursor.execute(query)
+
+        return cursor
 
 
 def main():
