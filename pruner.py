@@ -9,7 +9,9 @@ class Prunable:
         # requirements into SPARQL.
         
         if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
-        if not tree_uri:
+        if tree_uri:
+            tree_uri = self.uri_from_id(tree_uri)
+        else:
             trees = self.list_trees_containing_taxa(contains=contains,
                                                     show_counts=False,
                                                     filter=filter)

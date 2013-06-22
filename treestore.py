@@ -8,11 +8,12 @@ import sys
 import pypyodbc as pyodbc
 from pruner import Prunable
 from annotate import Annotatable
-from config import get_treestore_kwargs
+from config import get_treestore_kwargs, base_uri
 import tempfile
 import phylolabel
 import time
 from cStringIO import StringIO
+import posixpath
 
 
 __version__ = '0.1.2'
@@ -20,7 +21,8 @@ load_dir = os.path.join(tempfile.gettempdir(), 'treestore')
 
 
 class Treestore(Prunable, Annotatable):
-    def __init__(self, dsn='Virtuoso', user='dba', password='dba', load_dir=load_dir):
+    def __init__(self, dsn='Virtuoso', user='dba', password='dba', 
+                 load_dir=load_dir, base_uri=base_uri):
         '''Create a treestore object from an ODBC connection with given DSN,
         username and password.'''
 
@@ -28,6 +30,11 @@ class Treestore(Prunable, Annotatable):
         self.user = user
         self.password = password
         self.load_dir = load_dir
+        self.base_uri = base_uri
+
+    def uri_from_id(self, x):
+        if '://' in x: return x
+        return posixpath.join(self.base_uri, x)
 
 
     def get_connection(self):
@@ -50,7 +57,8 @@ class Treestore(Prunable, Annotatable):
         '''
         
         if tree_uri is None: tree_uri = os.path.basename(tree_file)
-        
+        else: tree_uri = self.uri_from_id(tree_uri)
+
         hash = sha.sha()
         hash.update(str(time.time()))
         tempfile_name = '%s.cdao' % hash.hexdigest()
@@ -59,7 +67,7 @@ class Treestore(Prunable, Annotatable):
             # label higher-order taxa before adding
             phylogeny = bp.read(tree_file, format)
             if isinstance(taxonomy, basestring):
-                taxonomy = self.get_trees(taxonomy)[0]
+                taxonomy = self.get_trees(self.uri_from_id(taxonomy))[0]
             phylolabel.label_tree(phylogeny, taxonomy, tax_root=tax_root)
             with open(os.path.join(self.load_dir, tempfile_name), 'w') as output_file:
                 bp._io.write([phylogeny], output_file, 'cdao')
@@ -107,6 +115,8 @@ class Treestore(Prunable, Annotatable):
         Tree(weight=1.0, rooted=False)
         '''
         
+        tree_uri = self.uri_from_id(tree_uri)
+        
         return [self.subtree(None, tree_uri)]
 
     def serialize_trees(self, tree_uri='', format='newick', trees=None):
@@ -117,7 +127,9 @@ class Treestore(Prunable, Annotatable):
         Example:
         >>> treestore.serialize_trees('http://www.example.org/test/')
         '''
-
+        
+        if tree_uri: tree_uri = self.uri_from_id(tree_uri)
+        
         if trees is None: 
             trees = [i for i in self.get_trees(tree_uri)]
         if not trees:
@@ -142,7 +154,9 @@ class Treestore(Prunable, Annotatable):
         Example:
         >>> treestore.remove_trees('http://www.example.org/test/')
         '''
-
+        
+        tree_uri = self.uri_from_id(tree_uri)
+        
         cursor = self.get_cursor()
         cursor.execute('sparql clear graph <%s>' % tree_uri)
 
@@ -192,6 +206,8 @@ ORDER BY DESC(?matches)
 
 
     def get_names(self, tree_uri=None, format=None):
+        if tree_uri: tree_uri = self.uri_from_id(tree_uri)
+
         query = '''sparql
 PREFIX obo: <http://purl.obolibrary.org/obo/>
 PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
@@ -253,6 +269,8 @@ PREFIX doi: <http://dx.doi.org/>''' + query
         
         
     def get_tree_info(self, tree_uri=None):
+        if tree_uri: tree_uri = self.uri_from_id(tree_uri)
+        
         query = self.build_query('''
 SELECT ?graph (count(?otu) as ?taxa) ?doi
 WHERE {
@@ -406,7 +424,7 @@ def main():
         print treestore.get_subtree(contains=contains, tree_uri=args.uri,
                                     format=args.format, 
                                     prune=not args.complete,
-                                    taxonomy=args.taxonomy,
+                                    taxonomy=treestore.uri_from_id(args.taxonomy) if args.taxonomy else None,
                                     filter=args.filter
                                     )
 

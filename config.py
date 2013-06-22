@@ -1,9 +1,16 @@
 import ConfigParser
 import os
 import sys
+import tempfile
 
+
+load_dir = os.path.join(tempfile.gettempdir(), 'treestore')
+base_uri = 'http://www.phylocommons.org/trees/'
 
 def get_treestore_kwargs():
+    global load_dir
+    global base_uri
+    
     config_dir = os.path.expanduser('~/.treestore')
     if not os.path.exists(config_dir): os.makedirs(config_dir)
     config_file_path = os.path.join(config_dir, 'treestore.config')
@@ -12,7 +19,8 @@ def get_treestore_kwargs():
                 ('dsn', 'Virtuoso'),
                 ('user', 'dba'),
                 ('password', 'dba'),
-                ('load_dir', '/tmp/treestore'),
+                ('load_dir', load_dir),
+                ('base_uri', base_uri),
                 ]
     
     config = ConfigParser.SafeConfigParser()
@@ -29,8 +37,8 @@ def get_treestore_kwargs():
     kwargs = {}
     for k, v in config.items('treestore'):
         kwargs[k] = v
-
-    load_dir = kwargs['load_dir'] if 'load_dir' in kwargs else dict(defaults)['load_dir']
+    
+    if 'load_dir' in kwargs: load_dir = kwargs['load_dir']
     if not os.path.exists(load_dir): os.makedirs(load_dir)
     
     return kwargs
