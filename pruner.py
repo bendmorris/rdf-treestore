@@ -191,7 +191,7 @@ class Prunable:
             ?x obo:CDAO_0000187 [ ?l1 ?synonym ; ?l2 ?label ]
             FILTER (?label = "%s" && 
                     ?l1 in (rdfs:label, skos:altLabel) &&
-                    ?l2 in (rdfs:label, rdfs:altLabel))
+                    ?l2 in (rdfs:label, skos:altLabel))
         }
     }''' % (graph, taxonomy, taxon)
         query += '\n}'

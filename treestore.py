@@ -8,7 +8,7 @@ import sys
 import pypyodbc as pyodbc
 from pruner import Prunable
 from annotate import Annotatable
-from config import get_treestore_kwargs, base_uri
+from config import get_treestore_kwargs, base_uri, load_dir
 import tempfile
 import phylolabel
 import time
@@ -17,8 +17,6 @@ import posixpath
 
 
 __version__ = '0.1.2'
-load_dir = os.path.join(tempfile.gettempdir(), 'treestore')
-
 
 class Treestore(Prunable, Annotatable):
     def __init__(self, dsn='Virtuoso', user='dba', password='dba', 
@@ -403,8 +401,10 @@ def main():
             trees = list(treestore.list_trees_containing_taxa(contains=contains, show_counts=args.counts))
         else:
             trees = list(treestore.list_trees())
-
+        
         if not trees: exit()
+
+        trees = [x[len(base_uri):] if x.startswith(base_uri) else x for x in trees]
         
         if args.l:
             print '\n'.join(trees)
