@@ -8,6 +8,7 @@ import sys
 import pypyodbc as pyodbc
 from pruner import Prunable
 from annotate import Annotatable
+from config import get_treestore_kwargs
 import tempfile
 import phylolabel
 import time
@@ -15,18 +16,18 @@ from cStringIO import StringIO
 
 
 __version__ = '0.1.2'
-treestore_dir = os.path.join(tempfile.gettempdir(), 'treestore')
-if not os.path.exists(treestore_dir): os.makedirs(treestore_dir)
+load_dir = os.path.join(tempfile.gettempdir(), 'treestore')
+
 
 class Treestore(Prunable, Annotatable):
-    def __init__(self, storage_name='virtuoso', dsn='Virtuoso', 
-                 user='dba', password='dba', storage=None):
+    def __init__(self, dsn='Virtuoso', user='dba', password='dba', load_dir=load_dir):
         '''Create a treestore object from an ODBC connection with given DSN,
         username and password.'''
 
         self.dsn = dsn
         self.user = user
         self.password = password
+        self.load_dir = load_dir
 
 
     def get_connection(self):
@@ -60,28 +61,28 @@ class Treestore(Prunable, Annotatable):
             if isinstance(taxonomy, basestring):
                 taxonomy = self.get_trees(taxonomy)[0]
             phylolabel.label_tree(phylogeny, taxonomy, tax_root=tax_root)
-            with open(os.path.join(treestore_dir, tempfile_name), 'w') as output_file:
+            with open(os.path.join(self.load_dir, tempfile_name), 'w') as output_file:
                 bp._io.write([phylogeny], output_file, 'cdao')
             
         else:
             if format == 'cdao':
                 # if it's already in CDAO format, just copy it
-                f1, f2 = tree_file, os.path.join(treestore_dir, tempfile_name)
+                f1, f2 = tree_file, os.path.join(self.load_dir, tempfile_name)
                 if not os.path.abspath(f1) == os.path.abspath(f2):
                     shutil.copy(f1, f2)
             else:
                 # otherwise, convert to CDAO
-                bp.convert(tree_file, format, os.path.join(treestore_dir, tempfile_name), 'cdao', 
+                bp.convert(tree_file, format, os.path.join(self.load_dir, tempfile_name), 'cdao', 
                            tree_uri=tree_uri, rooted=rooted)
         
         # run the bulk loader to load the CDAO tree into Virtuoso
         cursor = self.get_cursor()
         
         update_stmt = 'sparql load <file://%s> into <%s>' % (
-            os.path.abspath(os.path.join(treestore_dir, tempfile_name)), tree_uri)
+            os.path.abspath(os.path.join(self.load_dir, tempfile_name)), tree_uri)
         
         load_stmt = "ld_dir ('%s', '%s', '%s')" % (
-            os.path.abspath(treestore_dir), tempfile_name, tree_uri)
+            os.path.abspath(self.load_dir), tempfile_name, tree_uri)
         print load_stmt
         cursor.execute(load_stmt)
         
@@ -93,7 +94,7 @@ class Treestore(Prunable, Annotatable):
         # the bulk load list from the Virtuoso db after it's done
         cursor.execute('DELETE FROM DB.DBA.load_list')
         
-        os.remove(os.path.join(treestore_dir, tempfile_name))
+        os.remove(os.path.join(self.load_dir, tempfile_name))
         
         
     def get_trees(self, tree_uri):
@@ -314,6 +315,8 @@ def main():
                            nargs='?', default='')
     ls_parser.add_argument('--counts', help="display the number of matched taxa next to each tree URI",
                            action='store_true')
+    ls_parser.add_argument('-l', help="list one per line; don't try to pretty-print",
+                           action='store_true')
     
     # treestore names: get list of taxa contained in a tree
     names_parser = subparsers.add_parser('names', 
@@ -354,10 +357,11 @@ def main():
 
     args = parser.parse_args()
 
-    kwargs = {}
+    kwargs = get_treestore_kwargs()
     if args.dsn: kwargs['dsn'] = args.dsn
     if args.user: kwargs['user'] = args.user
     if args.password: kwargs['password'] = args.password
+    elif not 'password' in kwargs: password = raw_input('Enter your password:')
     treestore = Treestore(**kwargs)
 
     if args.command == 'add':
@@ -384,8 +388,11 @@ def main():
 
         if not trees: exit()
         
-        import lscolumns
-        lscolumns.printls(trees)
+        if args.l:
+            print '\n'.join(trees)
+        else:
+            import lscolumns
+            lscolumns.printls(trees)
 
 
     elif args.command == 'names':
