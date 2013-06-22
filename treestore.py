@@ -180,27 +180,48 @@ ORDER BY ?graph
         return (str(result[0]) for result in cursor)
 
 
-    def list_trees_containing_taxa(self, contains=[], show_counts=False, filter=None):
+    def list_trees_containing_taxa(self, contains=[], show_counts=False, taxonomy=None, filter=None):
         '''List all trees that contain the specified taxa.'''
 
+        taxa_list = ', '.join(['"%s"' % contain for contain in contains])
+        
+        if taxonomy:
+            taxonomy = self.uri_from_id(taxonomy)
+            syn_match_query = '''
+UNION {
+    GRAPH ?graph { ?t obo:CDAO_0000187 [ rdfs:label ?synonym ] }
+    GRAPH <%s> {
+        ?x obo:CDAO_0000187 [ ?l1 ?synonym ; ?l2 ?label ]
+        FILTER (?label in (%s) &&
+                ?l1 in (rdfs:label, skos:altLabel) &&
+                ?l2 in (rdfs:label, skos:altLabel))
+    }
+}''' % (taxonomy, taxa_list)
+
+        else: syn_match_query = ''
+        
         query = self.build_query('''
 SELECT DISTINCT ?graph (count(DISTINCT ?label) as ?matches)
 WHERE {
+{
     GRAPH ?graph {
         ?tree obo:CDAO_0000148 [] .
         { ?match rdfs:label ?label . FILTER (?label in (%s)) }
         %s
     }
-} 
+}
+%s
+}
 GROUP BY ?graph ?tree
-ORDER BY DESC(?matches)
-''' % (', '.join(['"%s"' % contain for contain in contains]), filter if filter else ''))
+ORDER BY DESC(?matches) ?graph
+''' % (taxa_list, filter if filter else '', syn_match_query))
         cursor = self.get_cursor()
+        #print query
         cursor.execute(query)
         
         for result in cursor:
-            if show_counts: yield '%s (%s)' % (result[0], result[1])
-            else: yield str(result[0])
+            if show_counts: yield (result[0], result[1])
+            else: yield (result[0])
 
 
     def get_names(self, tree_uri=None, format=None):
@@ -333,6 +354,8 @@ def main():
                            action='store_true')
     ls_parser.add_argument('-l', help="list one per line; don't try to pretty-print",
                            action='store_true')
+    ls_parser.add_argument('--taxonomy', help="the URI of a taxonomy graph to enable synonymy lookup",
+                           nargs='?', default=None)
     
     # treestore names: get list of taxa contained in a tree
     names_parser = subparsers.add_parser('names', 
@@ -398,7 +421,9 @@ def main():
         contains = args.contains
         if contains: 
             contains = set([s.strip() for s in contains.split(',')])
-            trees = list(treestore.list_trees_containing_taxa(contains=contains, show_counts=args.counts))
+            trees = list(treestore.list_trees_containing_taxa(contains=contains, taxonomy=args.taxonomy, show_counts=args.counts))
+            if show_counts: trees = ['%s (%s)' % tree or tree in trees]
+            else: trees = [str(x) for x in trees]
         else:
             trees = list(treestore.list_trees())
         
