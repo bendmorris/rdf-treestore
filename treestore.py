@@ -200,7 +200,7 @@ WHERE {
 %s
 }
 GROUP BY ?graph ?tree
-ORDER BY DESC(?matches) ?graph
+ORDER BY DESC(?matches) CONTAINS(STR(?graph), "_taxonomy") ?graph
 ''' % (filter if filter else '', syn_match_query))
         cursor = self.get_cursor()
         #print query
