@@ -182,7 +182,12 @@ ORDER BY ?graph
 
     def list_trees_containing_taxa(self, contains=[], show_counts=False, taxonomy=None, filter=None):
         '''List all trees that contain the specified taxa.'''
-
+        
+        if not contains:
+            for x in (x for x in self.list_trees()):
+                yield x
+            return
+        
         taxa_list = ', '.join(['"%s"' % contain for contain in contains])
         
         if taxonomy:
