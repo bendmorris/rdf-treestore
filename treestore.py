@@ -284,12 +284,12 @@ PREFIX doi: <http://dx.doi.org/>''' + query
         if tree_uri: tree_uri = self.uri_from_id(tree_uri)
         
         query = self.build_query('''
-SELECT ?graph (count(?otu) as ?taxa) ?doi
+SELECT ?graph (count(?otu) as ?taxa) ?citation
 WHERE {
     GRAPH ?graph {
         ?tree obo:CDAO_0000148 [] .
         ?otu obo:CDAO_0000187 [] .
-        OPTIONAL { ?tree bibo:cites ?doi . }
+        OPTIONAL { ?tree bibo:cites ?citation . }
     }
     %s
 } 
@@ -298,7 +298,7 @@ ORDER BY ?graph
         cursor = self.get_cursor()
         cursor.execute(query)
         
-        return [{k:v for k, v in zip(('tree', 'taxa', 'doi'), result) } for result in cursor]
+        return [{k:v for k, v in zip(('tree', 'taxa', 'citation'), result) } for result in cursor]
     
     def get_object_info(self, object):
         query = '''sparql
