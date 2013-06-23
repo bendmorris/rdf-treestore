@@ -188,21 +188,7 @@ class Treestore(Prunable, Annotatable):
         
         taxa_list = ', '.join(['"%s"' % contain for contain in contains])
         
-        if taxonomy and contains:
-            taxonomy = self.uri_from_id(taxonomy)
-            syn_match_query = '''
-UNION {
-    GRAPH ?graph { ?t obo:CDAO_0000187 [ rdfs:label ?synonym ] . %s }
-    GRAPH <%s> {
-        ?x obo:CDAO_0000187 [ ?l1 ?synonym ; ?l2 ?label ]
-        FILTER (?label in (%s) &&
-                ?l1 in (rdfs:label, skos:altLabel) &&
-                ?l2 in (rdfs:label, skos:altLabel))
-    }
-}''' % (filter if filter else '', taxonomy, taxa_list)
 
-        else: syn_match_query = ''
-        
         query = self.build_query('''
 SELECT DISTINCT ?graph (count(DISTINCT ?label) as ?matches)
 WHERE {
@@ -214,11 +200,31 @@ WHERE {
         %s
     }
 }
-%s
+''' % (filter if filter else ''))
+
+        # optional synonym matching
+        if taxonomy and contains:
+            taxonomy = self.uri_from_id(taxonomy)
+            query += '''
+UNION {
+    GRAPH ?graph { 
+        ?tree obo:CDAO_0000148 [] .
+        ?t obo:CDAO_0000187 [ rdfs:label ?synonym ] . %s 
+    }
+    GRAPH <%s> {
+        ?x obo:CDAO_0000187 [ ?l1 ?synonym ; ?l2 ?label ]
+        FILTER (?label in (%s) &&
+                ?l1 in (rdfs:label, skos:altLabel) &&
+                ?l2 in (rdfs:label, skos:altLabel))
+    }
+}''' % (filter if filter else '', taxonomy, taxa_list)
+
+        # end of query
+        query += '''
 }
-GROUP BY ?graph ?tree
+GROUP BY ?graph
 ORDER BY DESC(?matches) CONTAINS(STR(?graph), "_taxonomy") ?graph
-''' % (filter if filter else '', syn_match_query))
+'''
         cursor = self.get_cursor()
         #print query
         cursor.execute(query)
@@ -446,7 +452,7 @@ def main():
             trees = list(treestore.list_trees_containing_taxa(
                             contains=contains, taxonomy=args.taxonomy, 
                             show_counts=args.counts, filter=args.filter))
-            if args.counts: trees = ['%s (%s)' % tree or tree in trees]
+            if args.counts: trees = ['%s (%s)' % tree for tree in trees]
             else: trees = [str(x) for x in trees]
         else:
             trees = list(treestore.list_trees(filter=args.filter))
