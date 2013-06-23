@@ -115,7 +115,7 @@ class Prunable:
                 
                 # create a clade for each node, and store in a dictionary by URI
                 if not node_id in nodes:
-                    clade = bp.CDAO.Clade(name=label, branch_length=float(edge_length) if edge_length else 1)
+                    clade = bp.CDAO.Clade(name=label, branch_length=float(edge_length) if edge_length else None)
                     nodes[node_id] = clade
                 
                 # this is the root node if it has no parent or if it's the MRCA
