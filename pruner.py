@@ -9,6 +9,8 @@ class Prunable:
         # TODO: filter is not being used. Use cql.py to parse the query, then convert the
         # requirements into SPARQL.
         
+        filter = self.validate_filter(filter)
+        
         if not contains or contains_ids: raise Exception('A list of taxa or ids is required.')
         if tree_uri:
             tree_uri = self.uri_from_id(tree_uri)

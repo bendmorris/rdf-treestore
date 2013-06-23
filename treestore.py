@@ -48,6 +48,15 @@ class Treestore(Prunable, Annotatable):
         if x.startswith(base_uri): x = x[len(base_uri):].rstrip('/')
         return x
     
+    def validate_filter(self, x):
+        if not x: return x
+        
+        for banned_word in 'delete', 'insert':
+            if banned_word in x.lower():
+                raise Exception("Can't use the word %s in a filter." % banned_word)
+        
+        return x
+    
     
     def get_connection(self):
         if not self._connection: 
@@ -186,6 +195,8 @@ class Treestore(Prunable, Annotatable):
 
     def list_trees_containing_taxa(self, contains=[], show_counts=False, taxonomy=None, filter=None):
         '''List all trees that contain the specified taxa.'''
+
+        filter = self.validate_filter(filter)
         
         taxa_list = ', '.join([rdflib.Literal(contain).n3() for contain in contains])
         # TODO: if filter: sanitize filter
