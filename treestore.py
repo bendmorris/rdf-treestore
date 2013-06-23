@@ -14,6 +14,7 @@ import phylolabel
 import time
 from cStringIO import StringIO
 import posixpath
+from getpass import getpass
 
 
 __version__ = '0.1.2'
@@ -411,7 +412,7 @@ def main():
     if args.dsn: kwargs['dsn'] = args.dsn
     if args.user: kwargs['user'] = args.user
     if args.password: kwargs['password'] = args.password
-    elif not 'password' in kwargs: password = raw_input('Enter your password:')
+    elif not 'password' in kwargs: password = getpass()
     treestore = Treestore(**kwargs)
 
     if args.command == 'add':
