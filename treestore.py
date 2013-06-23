@@ -19,8 +19,11 @@ from getpass import getpass
 
 __version__ = '0.1.2'
 
+
+kwargs = get_treestore_kwargs()
+
 class Treestore(Prunable, Annotatable):
-    def __init__(self, dsn='Virtuoso', user='dba', password='dba', 
+    def __init__(self, dsn=kwargs['dsn'], user=kwargs['user'], password=kwargs['password'], 
                  load_dir=load_dir, base_uri=base_uri):
         '''Create a treestore object from an ODBC connection with given DSN,
         username and password.'''
@@ -30,6 +33,8 @@ class Treestore(Prunable, Annotatable):
         self.password = password
         self.load_dir = load_dir
         self.base_uri = base_uri
+        self._connection = None
+        self._cursor = None
 
     @classmethod
     def uri_from_id(self, x, base_uri=base_uri):
@@ -44,14 +49,19 @@ class Treestore(Prunable, Annotatable):
     
     
     def get_connection(self):
-        return pyodbc.connect('DSN=%s;UID=%s;PWD=%s' % (self.dsn, self.user, self.password),
-                              autocommit=True)
+        if not self._connection: 
+            self._connection =pyodbc.connect('DSN=%s;UID=%s;PWD=%s' % 
+                                             (self.dsn, self.user, self.password),
+                                             autocommit=True)
+        return self._connection
+    
+    connection = property(get_connection)
 
-    odbc_connection = property(get_connection)
-
-    def get_cursor(self):
-        connection = self.odbc_connection
-        return connection.cursor()
+    def get_cursor(self, need_new=False):
+        connection = self.connection
+        if need_new: return connection.cursor()
+        if not self._cursor: self._cursor = connection.cursor()
+        return self._cursor
 
     def add_trees(self, tree_file, format, tree_uri=None, rooted=False, 
         taxonomy=None, tax_root=None):
@@ -310,7 +320,7 @@ WHERE
     FILTER (?s = <%s>)
 }''' % object
 
-        cursor = self.get_cursor()
+        cursor = self.get_cursor(True)
         cursor.execute(query)
 
         return cursor
