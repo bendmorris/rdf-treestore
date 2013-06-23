@@ -440,7 +440,7 @@ def main():
         if not trees: exit()
 
         if not args.f:
-            trees = [self.id_from_uri(x) for x in trees]
+            trees = [treestore.id_from_uri(x) for x in trees]
         
         if args.l:
             print '\n'.join(trees)
