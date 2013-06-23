@@ -15,6 +15,7 @@ import time
 from cStringIO import StringIO
 import posixpath
 from getpass import getpass
+import rdflib
 
 
 __version__ = '0.1.2'
@@ -102,8 +103,8 @@ class Treestore(Prunable, Annotatable):
         # run the bulk loader to load the CDAO tree into Virtuoso
         cursor = self.get_cursor()
         
-        update_stmt = 'sparql load <file://%s> into <%s>' % (
-            os.path.abspath(os.path.join(self.load_dir, tempfile_name)), tree_uri)
+        update_stmt = 'sparql load <file://%s> into %s' % (
+            os.path.abspath(os.path.join(self.load_dir, tempfile_name)), rdflib.URIRef(tree_uri).n3())
         
         load_stmt = "ld_dir ('%s', '%s', '%s')" % (
             os.path.abspath(self.load_dir), tempfile_name, tree_uri)
@@ -174,7 +175,7 @@ class Treestore(Prunable, Annotatable):
         tree_uri = self.uri_from_id(tree_uri)
         
         cursor = self.get_cursor()
-        cursor.execute('sparql clear graph <%s>' % tree_uri)
+        cursor.execute('sparql clear graph %s' % rdflib.URIRef(tree_uri).n3())
 
 
     def list_trees(self, **kwargs):
@@ -186,9 +187,9 @@ class Treestore(Prunable, Annotatable):
     def list_trees_containing_taxa(self, contains=[], show_counts=False, taxonomy=None, filter=None):
         '''List all trees that contain the specified taxa.'''
         
-        taxa_list = ', '.join(['"%s"' % contain for contain in contains])
+        taxa_list = ', '.join([rdflib.Literal(contain).n3() for contain in contains])
+        # TODO: if filter: sanitize filter
         
-
         query = self.build_query('''
 SELECT DISTINCT ?graph (count(DISTINCT ?label) as ?matches)
 WHERE {
@@ -211,13 +212,13 @@ UNION {
         ?tree obo:CDAO_0000148 [] .
         ?t obo:CDAO_0000187 [ rdfs:label ?synonym ] . %s 
     }
-    GRAPH <%s> {
+    GRAPH %s {
         ?x obo:CDAO_0000187 [ ?l1 ?synonym ; ?l2 ?label ]
         FILTER (?label in (%s) &&
                 ?l1 in (rdfs:label, skos:altLabel) &&
                 ?l2 in (rdfs:label, skos:altLabel))
     }
-}''' % (filter if filter else '', taxonomy, taxa_list)
+}''' % (filter if filter else '', rdflib.URIRef(taxonomy).n3(), taxa_list)
 
         # end of query
         query += '''
@@ -249,7 +250,7 @@ WHERE {
     }
 }
 ORDER BY ?label
-''' % (('<%s>' % tree_uri) if tree_uri else '?graph')
+''' % ((rdflib.URIRef(tree_uri).n3()) if tree_uri else '?graph')
         
         cursor = self.get_cursor()
         cursor.execute(query)
@@ -311,7 +312,7 @@ WHERE {
     %s
 } 
 ORDER BY ?graph
-''' % ('' if tree_uri is None else ('FILTER(?graph = <%s>)' % tree_uri)))
+''' % ('' if tree_uri is None else ('FILTER(?graph = %s)' % rdflib.URIRef(tree_uri).n3())))
         cursor = self.get_cursor()
         cursor.execute(query)
         
@@ -323,8 +324,8 @@ SELECT ?v ?o
 WHERE
 {
     ?s ?v ?o .
-    FILTER (?s = <%s>)
-}''' % object
+    FILTER (?s = %s)
+}''' % rdflib.URIRef(object).n3()
 
         cursor = self.get_cursor(True)
         cursor.execute(query)

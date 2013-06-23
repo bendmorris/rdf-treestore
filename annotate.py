@@ -1,5 +1,6 @@
 import urllib2
 import re
+import rdflib
 
 
 class Annotatable:
@@ -23,14 +24,14 @@ class Annotatable:
             
         
         insert_stmt = self.build_query('''
-WITH <%s>
+WITH %s
 INSERT {
     %s
 }
 WHERE {
     ?tree obo:CDAO_0000148 [] .
 }
-        ''' % (tree_uri, annotations))
+        ''' % (rdflib.URIRef(tree_uri).n3(), annotations))
         print insert_stmt
         
         cursor.execute(insert_stmt)
@@ -45,4 +46,4 @@ def doi_lookup(doi):
     # strip out prefixes, which will already be present in the insert statement
     data = re.sub('@prefix [^\:]*\: \<[^\>]*\> .', '', data)
     
-    return '?tree bibo:cites <%s> .\n\n%s' % (doi, data)
+    return '?tree bibo:cites %s .\n\n%s' % (doi, rdflib.URIRef(data).n3())

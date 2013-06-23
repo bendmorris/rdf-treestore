@@ -1,5 +1,6 @@
 import Bio.Phylo as bp
 import sys
+import rdflib
 
 
 class Prunable:
@@ -91,7 +92,8 @@ class Prunable:
             ?n obo:CDAO_0000200 ?tree .
             ?n a ?type .
             ''' + ((
-    "?n obo:CDAO_0000179 <%s> option(transitive, t_min(0), t_step('step_no') as ?steps) ." % mrca
+    "?n obo:CDAO_0000179 %s option(transitive, t_min(0), t_step('step_no') as ?steps) ." 
+    % rdflib.URIRef(mrca).n3()
     ) if mrca else '') + '''
             OPTIONAL { ?n obo:CDAO_0000187 [ rdfs:label ?label ] . }
             OPTIONAL { ?n obo:CDAO_0000143 [ obo:CDAO_0000193 [ obo:CDAO_0000215 ?length ] ] . }
@@ -147,14 +149,14 @@ class Prunable:
 
     SELECT DISTINCT ?ancestor
     WHERE {
-        GRAPH <%s> { 
-            <%s> obo:CDAO_0000179 ?ancestor 
+        GRAPH %s { 
+            %s obo:CDAO_0000179 ?ancestor 
             option(transitive, t_direction 1, t_step('step_no') as ?steps, 
                    t_min 0, t_max 10000)
         }
     }
     ORDER BY ?steps
-    ''' % (graph, node_id)
+    ''' % (rdflib.URIRef(graph).n3(), rdflib.URIRef(node_id).n3())
         #print query
         cursor.execute(query)
         results = cursor
@@ -180,20 +182,20 @@ class Prunable:
     SELECT ?t ?label ''' + ('?synonym' if taxonomy else '') + '''
     WHERE { 
     {
-        GRAPH <%s> { 
+        GRAPH %s { 
             ?t obo:CDAO_0000187 [ rdfs:label ?label ] 
-            FILTER (?label = "%s") 
+            FILTER (?label = %s) 
         }
-    }''' % (graph, taxon)
+    }''' % (rdflib.URIRef(graph).n3(), rdflib.Literal(taxon).n3())
         if taxonomy: query += ''' UNION {
-        GRAPH <%s> { ?t obo:CDAO_0000187 [ rdfs:label ?synonym ] }
-        GRAPH <%s> { 
+        GRAPH %s { ?t obo:CDAO_0000187 [ rdfs:label ?synonym ] }
+        GRAPH %s { 
             ?x obo:CDAO_0000187 [ ?l1 ?synonym ; ?l2 ?label ]
-            FILTER (?label = "%s" && 
+            FILTER (?label = %s && 
                     ?l1 in (rdfs:label, skos:altLabel) &&
                     ?l2 in (rdfs:label, skos:altLabel))
         }
-    }''' % (graph, taxonomy, taxon)
+    }''' % (rdflib.URIRef(graph).n3(), rdflib.URIRef(taxonomy).n3(), rdflib.Literal(taxon).n3())
         query += '\n}'
         #print query
         cursor.execute(query)
