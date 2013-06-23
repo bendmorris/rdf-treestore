@@ -5,6 +5,9 @@ import re
 class Annotatable:
     def annotate(self, tree_uri, annotations=None, annotation_file=None, doi=None):
         '''Annotate tree with annotations from RDF file.'''
+        
+        if tree_uri: tree_uri = self.uri_from_id(tree_uri)
+        
         cursor = self.get_cursor()
         
         if annotations:
