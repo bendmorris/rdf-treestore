@@ -35,8 +35,13 @@ class Treestore(Prunable, Annotatable):
         if '://' in x: return x
         if not x.endswith('/'): x += '/'
         return posixpath.join(base_uri, x)
-
-
+    
+    @classmethod
+    def id_from_uri(self, x, base_uri=base_uri):
+        if x.startswith(base_uri): x = x[len(base_uri):].rstrip('/')
+        return x
+    
+    
     def get_connection(self):
         return pyodbc.connect('DSN=%s;UID=%s;PWD=%s' % (self.dsn, self.user, self.password),
                               autocommit=True)
@@ -434,7 +439,8 @@ def main():
         
         if not trees: exit()
 
-        trees = [x[len(base_uri):] if x.startswith(base_uri) and not args.f else x for x in trees]
+        if not args.f:
+            trees = [self.id_from_uri(x) for x in trees]
         
         if args.l:
             print '\n'.join(trees)
