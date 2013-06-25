@@ -46,4 +46,4 @@ def doi_lookup(doi):
     # strip out prefixes, which will already be present in the insert statement
     data = re.sub('@prefix [^\:]*\: \<[^\>]*\> .', '', data)
     
-    return '?tree bibo:cites %s .\n\n%s' % (doi, rdflib.URIRef(data).n3())
+    return '?tree bibo:cites %s .\n\n%s' % (rdflib.URIRef(doi).n3(), data)
