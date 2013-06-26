@@ -201,18 +201,21 @@ class Treestore(Prunable, Annotatable):
         taxa_list = ', '.join([rdflib.Literal(contain).n3() for contain in contains])
         # TODO: if filter: sanitize filter
         
-        query = self.build_query('''
+        query = '''
 SELECT DISTINCT ?graph (count(DISTINCT ?label) as ?matches)
 WHERE {
 {
     GRAPH ?graph {
         ?tree obo:CDAO_0000148 [] .
-        ''' + (('{ ?match rdfs:label ?label . FILTER (?label in (%s)) }'%taxa_list) if contains else '') 
-+ '''
-        %s
+        '''
+        if contains:
+            query += '{ ?match rdfs:label ?label . FILTER (?label in (%s)) }' % taxa_list
+        if filter:
+            query += filter
+        query += '''
     }
 }
-''' % (filter if filter else ''))
+'''
 
         # optional synonym matching
         if taxonomy and contains:
@@ -237,6 +240,7 @@ UNION {
 GROUP BY ?graph
 ORDER BY DESC(?matches) CONTAINS(STR(?graph), "_taxonomy") ?graph
 '''
+        query = self.build_query(query)
         cursor = self.get_cursor()
         #print query
         cursor.execute(query)
