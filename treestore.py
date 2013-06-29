@@ -24,6 +24,19 @@ __version__ = '0.1.2'
 kwargs = get_treestore_kwargs()
 
 class Treestore(Prunable, Annotatable):
+    prefixes = [
+                ('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#'), 
+                ('rdfs', 'http://www.w3.org/2000/01/rdf-schema#'), 
+                ('owl', 'http://www.w3.org/2002/07/owl#'), 
+                ('dc', 'http://purl.org/dc/elements/1.1/'), 
+                ('skos', 'http://www.w3.org/2004/02/skos/core#'), 
+                ('bibo', 'http://purl.org/ontology/bibo/'), 
+                ('foaf', 'http://xmlns.com/foaf/0.1/'), 
+                ('prism', 'http://prismstandard.org/namespaces/basic/2.0/'), 
+                ('obo', 'http://purl.obolibrary.org/obo/'), 
+                ('doi', 'http://dx.doi.org/')
+                ]
+
     def __init__(self, dsn=kwargs['dsn'], user=kwargs['user'], password=kwargs['password'], 
                  load_dir=load_dir, base_uri=base_uri):
         '''Create a treestore object from an ODBC connection with given DSN,
@@ -300,17 +313,7 @@ ORDER BY ?label
         
         
     def build_query(self, query):
-        return '''sparql
-PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX owl: <http://www.w3.org/2002/07/owl#>
-PREFIX dc: <http://purl.org/dc/elements/1.1/>
-PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
-PREFIX bibo: <http://purl.org/ontology/bibo/>
-PREFIX foaf: <http://xmlns.com/foaf/0.1/>
-PREFIX prism: <http://prismstandard.org/namespaces/basic/2.0/>
-PREFIX obo: <http://purl.obolibrary.org/obo/>
-PREFIX doi: <http://dx.doi.org/>''' + query
+        return 'sparql\n' + '\n'.join(['PREFIX %s: <%s>' % x for x in self.prefixes]) + query
         
         
     def get_tree_info(self, tree_uri=None):
