@@ -78,6 +78,17 @@ class Treestore(Prunable, Annotatable):
                                              autocommit=True)
         return self._connection
     
+    def close(self):
+        if self._connection:
+            self._connection.close()
+            self._connection = None
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, type, value, traceback):
+        self.close()
+    
     connection = property(get_connection)
 
     def get_cursor(self, need_new=False):
