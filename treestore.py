@@ -38,7 +38,7 @@ class Treestore(Prunable, Annotatable):
                 ]
 
     def __init__(self, dsn=kwargs['dsn'], user=kwargs['user'], password=kwargs['password'], 
-                 load_dir=load_dir, base_uri=base_uri):
+                 load_dir=load_dir, base_uri=base_uri, verbose=False):
         '''Create a treestore object from an ODBC connection with given DSN,
         username and password.'''
 
@@ -47,6 +47,7 @@ class Treestore(Prunable, Annotatable):
         self.password = password
         self.load_dir = load_dir
         self.base_uri = base_uri
+        self.verbose = verbose
         self._connection = None
         self._cursor = None
 
@@ -266,7 +267,7 @@ ORDER BY DESC(?matches) CONTAINS(STR(?graph), "_taxonomy") ?graph
 '''
         query = self.build_query(query)
         cursor = self.get_cursor()
-        #print query
+        if self.verbose: print query
         cursor.execute(query)
         
         for result in cursor:
@@ -292,6 +293,7 @@ ORDER BY ?label
 ''' % ((rdflib.URIRef(tree_uri).n3()) if tree_uri else '?graph')
         
         cursor = self.get_cursor()
+        if self.verbose: print query
         cursor.execute(query)
 
         results = cursor
@@ -343,6 +345,7 @@ WHERE {
 ORDER BY ?graph
 ''' % ('' if tree_uri is None else ('FILTER(?graph = %s)' % rdflib.URIRef(tree_uri).n3())))
         cursor = self.get_cursor()
+        if self.verbose: print query
         cursor.execute(query)
         
         return [{k:v for k, v in zip(('tree', 'taxa', 'citation'), result) } for result in cursor]
@@ -357,6 +360,7 @@ WHERE
 }''' % rdflib.URIRef(object).n3()
 
         cursor = self.get_cursor(True)
+        if self.verbose: print query
         cursor.execute(query)
 
         return cursor
@@ -370,7 +374,8 @@ def main():
     output_formats = '%s | ascii' % bp_formats
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-v', '--version', action='version', version=__version__)
+    parser.add_argument('--version', action='version', version=__version__)
+    parser.add_argument('-v', '--verbose', action='store_true', help='write out SPARQL queries before executing')
     parser.add_argument('-s', '--store', help='name of Redland store (default=virtuoso)')
     parser.add_argument('-d', '--dsn', help='ODBC DSN (default=Virtuoso)')
     parser.add_argument('-u', '--user', help='ODBC user (default=dba)')
@@ -454,11 +459,11 @@ def main():
 
     args = parser.parse_args()
 
-    kwargs = get_treestore_kwargs()
     if args.dsn: kwargs['dsn'] = args.dsn
     if args.user: kwargs['user'] = args.user
     if args.password: kwargs['password'] = args.password
     elif not 'password' in kwargs: password = getpass()
+    kwargs['verbose'] = args.verbose
     treestore = Treestore(**kwargs)
 
     if args.command == 'add':

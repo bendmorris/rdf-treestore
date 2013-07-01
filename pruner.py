@@ -103,7 +103,7 @@ class Prunable:
             FILTER (?type = obo:CDAO_0000108 || ?type = obo:CDAO_0000026)
         }
     }''' +  ('ORDER BY ?steps ?n' if mrca else 'ORDER BY ?n')
-        #print query
+        if self.verbose: print query
         cursor.execute(query)
         root = None
         nodes = {}
@@ -159,7 +159,7 @@ class Prunable:
     }
     ORDER BY ?steps
     ''' % (rdflib.URIRef(graph).n3(), rdflib.URIRef(node_id).n3())
-        #print query
+        if self.verbose: print query
         cursor.execute(query)
         results = cursor
         
@@ -199,7 +199,7 @@ class Prunable:
         }
     }''' % (rdflib.URIRef(graph).n3(), rdflib.URIRef(taxonomy).n3(), rdflib.Literal(taxon).n3())
         query += '\n}'
-        #print query
+        if self.verbose: print query
         cursor.execute(query)
         results = cursor
         

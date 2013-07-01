@@ -32,8 +32,8 @@ WHERE {
     ?tree obo:CDAO_0000148 [] .
 }
         ''' % (rdflib.URIRef(tree_uri).n3(), annotations))
-        print insert_stmt
-        
+
+        if self.verbose: print insert_stmt
         cursor.execute(insert_stmt)
 
 
