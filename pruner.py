@@ -5,7 +5,8 @@ import rdflib
 
 class Prunable:
     def get_subtree(self, contains=[], contains_ids=[], tree_uri=None,
-                    format='newick', prune=True, filter=None, taxonomy=None):
+                    format='newick', prune=True, filter=None, taxonomy=None,
+                    handle=None):
         # TODO: filter is not being used. Use cql.py to parse the query, then convert the
         # requirements into SPARQL.
         
@@ -27,7 +28,7 @@ class Prunable:
         tree = self.subtree(list(contains), tree_uri, 
                             taxonomy=taxonomy, prune=prune)
         
-        return self.serialize_trees(trees=[tree], format=format)
+        return self.serialize_trees(trees=[tree], format=format, handle=handle)
         
         
     def find_mrca(self, taxa, graph, taxonomy=None):

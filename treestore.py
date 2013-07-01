@@ -170,7 +170,7 @@ class Treestore(Prunable, Annotatable):
         
         return [self.subtree(None, tree_uri)]
 
-    def serialize_trees(self, tree_uri='', format='newick', trees=None):
+    def serialize_trees(self, tree_uri='', format='newick', trees=None, handle=None):
         '''Retrieve trees serialized to any format supported by Biopython.
         
         Current options include 'newick', 'nexus', 'phyloxml', 'nexml', and 'cdao'
@@ -179,14 +179,16 @@ class Treestore(Prunable, Annotatable):
         >>> treestore.serialize_trees('http://www.example.org/test/')
         '''
         
+        if handle: s = handle
+        else: s = StringIO()
+        
         if tree_uri: tree_uri = self.uri_from_id(tree_uri)
         
         if trees is None: 
-            trees = [i for i in self.get_trees(tree_uri)]
+            trees = [(x for x in self.get_trees(tree_uri)).next()]
         if not trees:
             raise Exception('Tree to be serialized not found.')
 
-        s = StringIO()
         if format == 'cdao':
             bp.write(trees, s, format, tree_uri=tree_uri)
         elif format == 'ascii':
@@ -194,6 +196,7 @@ class Treestore(Prunable, Annotatable):
         else:
             bp.write(trees, s, format)
 
+        if handle: return
         return s.getvalue()
 
 
@@ -473,7 +476,7 @@ def main():
         
     elif args.command == 'get':
         # get a tree, serialize in specified format, and output to stdout
-        print treestore.serialize_trees(args.uri, args.format),
+        treestore.serialize_trees(args.uri, args.format, handle=sys.stdout)
         
     elif args.command == 'rm':
         # remove a certain tree from the treestore
@@ -512,12 +515,13 @@ def main():
 
     elif args.command == 'query':
         contains = set([s.strip() for s in args.contains.split(',')])
-        print treestore.get_subtree(contains=contains, tree_uri=args.uri,
-                                    format=args.format, 
-                                    prune=not args.complete,
-                                    taxonomy=treestore.uri_from_id(args.taxonomy) if args.taxonomy else None,
-                                    filter=args.filter
-                                    )
+        treestore.get_subtree(contains=contains, tree_uri=args.uri,
+                              format=args.format, 
+                              prune=not args.complete,
+                              taxonomy=treestore.uri_from_id(args.taxonomy) if args.taxonomy else None,
+                              filter=args.filter,
+                              handle=sys.stdout,
+                              )
 
     elif args.command == 'annotate':
         treestore.annotate(args.uri, annotations=args.text, annotation_file=args.file, doi=args.doi)
